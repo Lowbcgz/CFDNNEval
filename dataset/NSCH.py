@@ -45,7 +45,7 @@ class NSCHDataset(Dataset):
         mobs_list=[]
         cas_list=[]
         res_list=[]
-        root_path = os.path.abspath(saved_folder + filename)
+        root_path = os.path.join(saved_folder, filename)
         with h5py.File(root_path, 'r') as f:
             # collect data
             for name in f.keys():

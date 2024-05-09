@@ -34,7 +34,7 @@ class DarcyDataset(Dataset):
 
         self.multi_step_size = multi_step_size
 
-        root_path = os.path.abspath(saved_folder + filename)
+        root_path = os.path.join(saved_folder, filename)
         if_init = True
         with h5py.File(root_path, 'r') as f:
             keys = list(f.keys())

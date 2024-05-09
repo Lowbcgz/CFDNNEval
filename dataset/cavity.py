@@ -55,7 +55,7 @@ class CavityDataset(Dataset):
 
         cnt = 0 # for reduced batch
 
-        root_path = os.path.abspath(saved_folder + filename)
+        root_path = os.path.join(saved_folder, filename)
         with h5py.File(root_path, 'r') as f:
             keys = list(f.keys())
             keys.sort()
