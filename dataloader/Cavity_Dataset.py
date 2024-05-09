@@ -227,13 +227,3 @@ class Cavity_Dataset(Dataset):
         case_params = self.case_params[case_id] #(x, y, p)
         grid = self.grids[case_id] #(x, y, 2)
         return inputs, label, mask, case_params, grid, case_id
-
-
-def setup_seed(seed):
-    torch.manual_seed(seed)  # CPU
-    torch.cuda.manual_seed_all(seed)  # GPU
-    np.random.seed(seed)  # numpy
-    random.seed(seed)  # random and transforms
-    torch.backends.cudnn.deterministic = True  # cudnn
-    
-
