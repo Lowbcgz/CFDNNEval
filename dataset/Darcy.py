@@ -5,7 +5,7 @@ import torch
 import random
 from torch.utils.data import Dataset
 
-class Darcy_Dataset(Dataset):
+class DarcyDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',

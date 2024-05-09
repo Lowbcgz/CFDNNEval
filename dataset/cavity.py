@@ -6,7 +6,7 @@ import random
 from torch.utils.data import Dataset
 
 
-class Cavity_Dataset(Dataset):
+class CavityDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',

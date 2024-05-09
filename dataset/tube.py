@@ -5,7 +5,7 @@ import torch
 import random
 from torch.utils.data import Dataset
 
-class Tube_Dataset(Dataset):
+class TubeDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',

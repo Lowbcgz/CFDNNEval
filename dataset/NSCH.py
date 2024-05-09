@@ -5,7 +5,7 @@ import torch
 import random
 from torch.utils.data import Dataset
 
-class NSCH_Dataset(Dataset):
+class NSCHDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',
