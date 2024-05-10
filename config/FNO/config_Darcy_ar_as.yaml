@@ -1,0 +1,43 @@
+flow_name: 'Darcy'
+model_name: "FNO"
+if_training: True
+continue_training: False
+model_path: null
+saved_dir: "./checkpoint/"
+output_dir: "./output/"
+save_period: 10
+plot_interval: 1
+# 训练相关参数
+seed: 0
+training_type: "autoregressive"
+epochs: 400
+# 数据集相关参数 
+dataset:
+  single_file: True
+  saved_folder: "/home/data2/darcy/"
+  reduced_resolution: 1
+  reduced_batch: 1
+  case_name: 'ar_as'
+# dataloader相关参数
+dataloader:
+  train_batch_size: 128
+  val_batch_size: 128
+  test_batch_size: 1
+  num_workers: 4
+  pin_memory: False
+# 模型相关参数
+model:
+  input_channel: 1
+  output_channel: 3
+  width: 32
+  modes: 12
+# 优化器相关参数
+optimizer:
+  name: 'Adam'
+  lr: 1.e-3
+  weight_decay: 1.e-4
+# scheduler相关参数
+scheduler:
+  name: "StepLR"
+  step_size: 20
+  gamma: 0.9

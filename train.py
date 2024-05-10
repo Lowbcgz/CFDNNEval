@@ -6,146 +6,15 @@ import torch.nn.functional as F
 import yaml
 import argparse
 import metrics
-import tqdm
-from functools import reduce
-from functools import partial
-from torch.utils.data import DataLoader
+# import tqdm
+# from functools import reduce
+# from functools import partial
 from timeit import default_timer
-from utils import *
+from utils import setup_seed, get_model, get_dataset, get_dataloader
 from visualize import *
-from uno import UNO1d, UNO2d, UNO3d
 from dataset import *
 
 
-def get_dataset(args):
-    dataset_args = args["dataset"]
-    if(args["flow_name"] in ["tube"]):
-        train_data = TubeDataset(filename=args['flow_name'] + '_train.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                delta_time=dataset_args['delta_time'],
-                                stable_state_diff = dataset_args['stable_state_diff'],
-                                norm_props = dataset_args['norm_props'],
-                                norm_bc = dataset_args['norm_bc'],
-                                multi_step_size= dataset_args['multi_step_size']
-                                )
-        val_data = TubeDataset(filename=args['flow_name'] + '_dev.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                delta_time=dataset_args['delta_time'],
-                                stable_state_diff = dataset_args['stable_state_diff'],
-                                norm_props = dataset_args['norm_props'],
-                                norm_bc = dataset_args['norm_bc'],
-                                multi_step_size= dataset_args['multi_step_size']
-                                )
-        test_data = TubeDataset(filename=args['flow_name'] + '_test.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                delta_time=dataset_args['delta_time'],
-                                stable_state_diff = dataset_args['stable_state_diff'],
-                                norm_props = dataset_args['norm_props'],
-                                norm_bc = dataset_args['norm_bc']
-                                )
-    elif args["flow_name"] == "NSCH":
-        train_data = NSCHDataset(
-                                filename='train.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
-                                norm_props = dataset_args['norm_props'],
-                                )
-        val_data = NSCHDataset(
-                                filename='val.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
-                                norm_props = dataset_args['norm_props'],
-                                )
-        test_data = NSCHDataset(
-                                filename='test.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
-                                norm_props = dataset_args['norm_props'],
-                                )
-    elif args['flow_name'] == 'Darcy':
-        train_data = DarcyDataset(
-                                filename=args['flow_name'] + '_train.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                )
-        val_data = DarcyDataset(
-                                filename=args['flow_name'] + '_dev.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                )
-        test_data = DarcyDataset(
-                                filename=args['flow_name'] + '_test.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                )
-    return train_data, val_data, test_data
-
-def get_dataloader(train_data, val_data, test_data, args):
-    dataloader_args = args["dataloader"]
-    train_loader = DataLoader(train_data, shuffle=True, multiprocessing_context = 'spawn', generator=torch.Generator(device = 'cpu'), 
-                              batch_size=dataloader_args['train_batch_size'], 
-                              num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
-    val_loader = DataLoader(val_data, shuffle=False, multiprocessing_context = 'spawn', generator=torch.Generator(device = 'cpu'), 
-                            batch_size=dataloader_args['val_batch_size'],
-                            num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
-    test_loader = DataLoader(test_data, shuffle=False, drop_last=True,
-                            batch_size=dataloader_args['test_batch_size'],
-                            num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
-    
-    return train_loader, val_loader, test_loader
-
-def get_model(spatial_dim, n_case_params, args):
-    assert spatial_dim <= 3, "Spatial dimension of data can not exceed 3."
-
-    model_args = args["model"]
-    if args['flow_name'] in ["Darcy"]:
-        if spatial_dim == 2:
-            model = UNO2d(num_channels=model_args["input_channels"],
-                          width=model_args["width"],
-                          n_case_params = n_case_params,
-                          output_channels=model_args["output_channels"])
-        else:
-            #TODO
-            pass
-    else:
-        if spatial_dim == 1:
-            model = UNO1d(num_channels=model_args["num_channels"],
-                        width=model_args["width"],
-                        n_case_params = n_case_params)
-        elif spatial_dim == 2:
-            model = UNO2d(num_channels=model_args['num_channels'],
-                        width = model_args['width'],
-                        n_case_params = n_case_params)
-        elif spatial_dim == 3:
-            model = UNO3d(num_channels=model_args["num_channels"],
-                        width = model_args['width'],
-                        n_case_params = n_case_params)
-    
-    return model
 
 def train_loop(model, train_loader, optimizer, loss_fn, device, args):
     model.train()
@@ -287,8 +156,11 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
         print('consider the result between frames')
     elif test_type == 'accumulate':
         print('consider the accumulate result')
+    elif test_type == "multi_step":
+        print("consider the accumulate result for multi_step")
     else:
-        raise("test type error, plz set it as 'frames' or 'accumulate'")
+        raise("test type error, plz set it as 'frames', 'accumulate' or 'multi_step'")
+
     
     res_dict = {}
     for name in metric_names:
@@ -299,7 +171,7 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
         os.makedirs(ckpt_dir)
 
     prev_case_id = -1
-
+    t1 = default_timer()
     with torch.no_grad():
         for x, y, mask, case_params, grid, case_id in test_loader:
             case_id = case_id.item()
@@ -308,46 +180,62 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
                 step = 0
             
             step += 1
-            # batch_size = x.size(0)
-            if test_type == 'frames' or prev_case_id == -1:
-                x = x.to(device) # x: input tensor (The previous time step grand truth data) [b, x1, ..., xd, v]
-            elif test_type == 'accumulate' and prev_case_id != -1:
-                x = pred.detach().clone() # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
-            y = y.to(device) # y: target tensor (The latter time step) [b, x1, ..., xd, v]
-            grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims]
-            mask = mask.to(device) # mask [b, x1, ..., xd, 1]
+
+            y = y.to(device) # y: target tensor  [b, x1, ..., xd, v] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, v]
+            grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims] 
+            mask = mask.to(device) # mask [b, x1, ..., xd, 1] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
-
-            if case_params.shape[-1] == 0: #darcy
-                case_params = case_params.reshape(0)
-
-            if training_type == 'autoregressive':
-                # Autoregressive loop
-                # Model run
+            
+            if test_loader.dataset.multi_step_size ==1:
+                # batch_size = x.size(0)
+                if test_type == 'frames' or prev_case_id == -1:
+                    x = x.to(device) # x: input tensor (The previous time step grand truth data) [b, x1, ..., xd, v]
+                elif test_type == 'accumulate' and prev_case_id != -1:
+                    x = pred.detach().clone() # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
+                else:
+                    raise Exception(f"test_type {test_type} is not support for a single_step test_loader ")
+                
                 pred = model(x, case_params, mask, grid)
 
                 for name in metric_names:
                     metric_fn = getattr(metrics, name)
                     res_dict[name].append(metric_fn(pred, y))
-                
-                # if step % plot_interval == 0:
-                #     image_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/images")
-                #     if not os.path.exists(image_dir):
-                #         os.makedirs(image_dir)
-                #     if test_type == 'frames':
-                #         plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
-                #     elif test_type == 'accumulate':
-                #         plot_predictions(label = y, pred = pred, out_dir=image_dir, step=step)
+                    
+                    
+                prev_case_id = case_id
+            else:
+                # autoregressive loop for multi_step
+                x= x.to(device)
+                preds=[]
+                for i in range(test_loader.dataset.multi_step_size):
+                    pred = model(x, case_params, mask[:,i], grid)
+                    preds.append(pred)
+                    x = pred
+                preds=torch.stack(preds, dim=1)
+                _batch = preds.size(0)
+                for name in metric_names:
+                    metric_fn = getattr(metrics, name)
+                    res_dict[name].append(metric_fn(preds, y))
+               
+            # if step % plot_interval == 0:
+            #     image_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/images")
+            #     if not os.path.exists(image_dir):
+            #         os.makedirs(image_dir)
+            #     if test_type == 'frames':
+            #         plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
+            #     elif test_type == 'accumulate':
+            #         plot_predictions(label = y, pred = pred, out_dir=image_dir, step=step)
 
-                #     #plot the stream line    
-                #     streamline_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/streamline")
-                #     if not os.path.exists(streamline_dir):
-                #         os.makedirs(streamline_dir)
-                #     plot_stream_line(pred = pred, label = y, grid = grid, out_dir = streamline_dir, step=step)
-            prev_case_id = case_id
-
-    NMSE_List = [i.mean().item() for i in res_dict["NMSE"]]
-    plot_loss(NMSE_List, Path(ckpt_dir) / "loss.png")
+            #     #plot the stream line    
+            #     streamline_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/streamline")
+            #     if not os.path.exists(streamline_dir):
+            #         os.makedirs(streamline_dir)
+            #     plot_stream_line(pred = pred, label = y, grid = grid, out_dir = streamline_dir, step=step)
+            
+    t2 = default_timer()
+    print("averge time: {0:.3f} s".format((t2-t1)/len(test_loader.dataset)))
+    # NMSE_List = [i.mean().item() for i in res_dict["NMSE"]]
+    # plot_loss(NMSE_List, Path(ckpt_dir) / "loss.png")
 
     #reshape
     for name in metric_names:
@@ -360,16 +248,18 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
             res = torch.mean(res, dim=0)
         res_dict[name] = res
     metrics.print_res(res_dict)
-
-    metrics.write_res(res_dict, test_type + '_results.csv', args["flow_name"] + '_' + args['dataset']['case_name'], append = True)
+    metrics.write_res(res_dict, 
+                      os.path.join(args["output_dir"],args["model_name"]+test_type + '_results.csv'),
+                       args["flow_name"] + '_' + args['dataset']['case_name'], 
+                       append = True)
     return 
 
 def main(args):
     #init
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     checkpoint = None
-    saved_dir = os.path.join(args["saved_dir"], args["flow_name"] + '_' + args['dataset']['case_name'])
-    output_dir = os.path.join(args["output_dir"], args["flow_name"] + '_' + args['dataset']['case_name'])
+    saved_dir = os.path.join(args["saved_dir"], os.path.join(args["model_name"], args["flow_name"] + '_' + args['dataset']['case_name']))
+    output_dir = os.path.join(args["output_dir"], os.path.join(args["model_name"],args["flow_name"] + '_' + args['dataset']['case_name']))
 
     if not os.path.exists(saved_dir):
         os.makedirs(saved_dir)
@@ -382,18 +272,19 @@ def main(args):
                         f"_lr{args['optimizer']['lr']}" +
                         f"_bs{args['dataloader']['train_batch_size']}" +
                         args["flow_name"] + 
-                        dataset_args['case_name'] +
-                        '_UNO'
+                        dataset_args['case_name']
                         )
     
     saved_path = os.path.join(saved_dir, saved_model_name)
     
     # data get dataloader
-    train_data, val_data, test_data = get_dataset(args)
-    train_loader, val_loader, test_loader = get_dataloader(train_data, val_data, test_data, args)
+    train_data, val_data, test_data, test_ms_data = get_dataset(args)
+    train_loader, val_loader, test_loader, test_ms_loader = get_dataloader(train_data, val_data, test_data, test_ms_data, args)
 
     # set some train args
-    sample, _, _, case_params, grid, _, = next(iter(val_loader))
+    input, output, _, case_params, grid, _, = next(iter(val_loader))
+    print("input tensor shape: ", input.shape[1:])
+    print("output tensor shape: ", output.shape[1:] if val_loader.dataset.multi_step_size==1 else output.shape[2:])
     spatial_dim = grid.shape[-1]
     n_case_params = case_params.shape[-1]
 
@@ -408,7 +299,8 @@ def main(args):
         print("start testing...")
         test_loop(test_loader, model, device, args["training_type"], output_dir, test_type='frames')
         test_loop(test_loader, model, device, args["training_type"], output_dir, test_type='accumulate')
-        print("Done")
+        test_loop(test_ms_loader, model, device, args["training_type"], output_dir, test_type='multi_step')
+        print("Done") 
         return
     ## if continue training, resume model from checkpoint
     if args["continue_training"]:
@@ -443,7 +335,7 @@ def main(args):
     # save loss history
     loss_history = []
     if args["continue_training"]:
-        loss_history = np.load('./log/loss/' + args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy')
+        loss_history = np.load('./log/loss/' +args["model_name"] + args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy')
         loss_history = loss_history.tolist()
 
      # train loop
@@ -477,15 +369,24 @@ def main(args):
     loss_history = np.array(loss_history)
     if not os.path.exists('./log/loss/'):
         os.makedirs('./log/loss/')
-    np.save('./log/loss/' + args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy', loss_history)
+    np.save('./log/loss/' + args["model_name"]+args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy', loss_history)
     print("avg_time : {0:.5f}".format(total_time / (args["epochs"] - start_epoch)))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config_file", type=str, help="Path to config file")
+    parser.add_argument("--test", action='store_true', help='test mode')
+    parser.add_argument("--continue_training", action='store_true', help='continue training')
+    parser.add_argument("-c", "--case_name", type=str, default="", help="For the case, if no value is entered, the yaml file shall prevail")
+
     cmd_args = parser.parse_args()
     with open(cmd_args.config_file, 'r') as f:
         args = yaml.safe_load(f)
+    args['if_training'] = not cmd_args.test
+    args['continue_training'] = cmd_args.continue_training
+    if len(cmd_args.case_name) > 0:
+        args['dataset']['case_name'] = cmd_args.case_name
+
     setup_seed(args["seed"])
     print(args)
     main(args)

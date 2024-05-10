@@ -1,6 +1,10 @@
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 import random
+# from model.uno import UNO1d, UNO2d, UNO3d
+from model.fno import FNO2d
+from dataset import *
 
 def setup_seed(seed):
     torch.manual_seed(seed)  # CPU
@@ -8,3 +12,166 @@ def setup_seed(seed):
     np.random.seed(seed)  # numpy
     random.seed(seed)  # random and transforms
     torch.backends.cudnn.deterministic = True  # cudnn
+
+def get_dataset(args):
+    dataset_args = args["dataset"]
+    if(args["flow_name"] == "tube"):
+        train_data = TubeDataset(filename=args['flow_name'] + '_train.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                delta_time=dataset_args['delta_time'],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                norm_bc = dataset_args['norm_bc'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        val_data = TubeDataset(filename=args['flow_name'] + '_dev.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                delta_time=dataset_args['delta_time'],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                norm_bc = dataset_args['norm_bc'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        test_data = TubeDataset(filename=args['flow_name'] + '_test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                delta_time=dataset_args['delta_time'],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                norm_bc = dataset_args['norm_bc']
+                                )
+        test_ms_data = TubeDataset(filename=args['flow_name'] + '_test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                delta_time=dataset_args['delta_time'],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                norm_bc = dataset_args['norm_bc'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+    elif args["flow_name"] == "NSCH":
+        train_data = NSCHDataset(
+                                filename='train.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                )
+        val_data = NSCHDataset(
+                                filename='val.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                )
+        test_data = NSCHDataset(
+                                filename='test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                )
+    elif args['flow_name'] == 'Darcy':
+        train_data = DarcyDataset(
+                                filename=args['flow_name'] + '_train.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                )
+        val_data = DarcyDataset(
+                                filename=args['flow_name'] + '_dev.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                )
+        test_data = DarcyDataset(
+                                filename=args['flow_name'] + '_test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                )
+    else:
+        raise ValueError("Invalid flow name.")
+    print("#Train data: ", len(train_data))
+    print("#Validation data: ", len(val_data))
+    print("#Test data: ", len(test_data))
+    return train_data, val_data, test_data, test_ms_data
+
+def get_dataloader(train_data, val_data, test_data, test_ms_data, args):
+    dataloader_args = args["dataloader"]
+    train_loader = DataLoader(train_data, shuffle=True, multiprocessing_context = 'spawn', generator=torch.Generator(device = 'cpu'), 
+                              batch_size=dataloader_args['train_batch_size'], 
+                              num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+    val_loader = DataLoader(val_data, shuffle=False, multiprocessing_context = 'spawn', generator=torch.Generator(device = 'cpu'), 
+                            batch_size=dataloader_args['val_batch_size'],
+                            num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+    test_loader = DataLoader(test_data, shuffle=False, drop_last=True,
+                            batch_size=dataloader_args['test_batch_size'],
+                            num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+    test_ms_loader = DataLoader(test_ms_data, shuffle=False, drop_last=True,
+                            batch_size=dataloader_args['test_batch_size'],
+                            num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+    
+    return train_loader, val_loader, test_loader, test_ms_loader
+
+def get_model(spatial_dim, n_case_params, args):
+    assert spatial_dim <= 3, "Spatial dimension of data can not exceed 3."
+    model_name = args["model_name"]
+    model_args = args["model"]
+    if args['flow_name'] in ["Darcy"]:
+        if spatial_dim == 2:
+            # model = UNO2d(num_channels=model_args["input_channels"],
+            #               width=model_args["width"],
+            #               n_case_params = n_case_params,
+            #               output_channels=model_args["output_channels"])
+            pass
+        else:
+            #TODO
+            pass
+    else:
+        if spatial_dim == 1:
+            # model = UNO1d(num_channels=model_args["num_channels"],
+            #             width=model_args["width"],
+            #             n_case_params = n_case_params)
+            pass
+        elif spatial_dim == 2:
+            # model = UNO2d(num_channels=model_args['num_channels'],
+            #             width = model_args['width'],
+            #             n_case_params = n_case_params)
+            if model_name == "UNO":
+                # model = UNO2d(num_channels=model_args['num_channels'],
+                #             width = model_args['width'],
+                #             n_case_params = n_case_params)
+                pass
+            if model_name == "FNO":
+                model = FNO2d(inputs_channel=model_args['inputs_channel'],
+                              outputs_channel=model_args['outputs_channel'],
+                      width = model_args['width'],
+                      modes1 = model_args['modes'],
+                      modes2 = model_args['modes'],
+                      n_case_params = n_case_params)
+        elif spatial_dim == 3:
+            # model = UNO3d(num_channels=model_args["num_channels"],
+            #             width = model_args['width'],
+            #             n_case_params = n_case_params)
+            pass
+    return model

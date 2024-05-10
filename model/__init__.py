@@ -1,0 +1,1 @@
+from .fno import FNO2d

@@ -91,7 +91,7 @@ def print_res(res):
                     print(u, "\t{0:.6f}".format(v[i].item()), end='\t')
                 else:
                     print("{0:.6f}".format(v[i].item()), end='\t')
-            print("")
+            print("mean: {0:.6f}".format(v.mean().item()))
     return
 
 def write_res(res, filename, tag, append=True):

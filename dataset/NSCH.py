@@ -12,7 +12,7 @@ class NSCHDataset(Dataset):
                  case_name = 'bc_ca_mob_phi_pre_re_uv0',
                  reduced_resolution = 1,
                  reduced_batch = 1,
-                 stable_state_diff = 0.001,
+                 stable_state_diff = 0.0001,
                  norm_props = True,
                  reshape_parameters = True,
                  ):
@@ -68,14 +68,15 @@ class NSCHDataset(Dataset):
 
         # print(fuvp.shape) # (B, T, Nx*Ny, 6)  6:(x,y,phi,u,v,pressure)
         fuvp= fuvp.reshape(fuvp.shape[0],fuvp.shape[1],66,66,6)
+        fuv = fuvp[:,:,:,:, :5] # (B, T, Nx, Ny, 5)
         # idx = 0 # The index to record data corresponding to each frame
-        fuvp = fuvp[:,:, ::reduced_resolution, ::reduced_resolution] # (B, T, Nx, Ny, 6)
+        fuv = fuv[:,:, ::reduced_resolution, ::reduced_resolution] # (B, T, Nx, Ny, 5)
         
 
         # filter the vaild frames
-        for i in range(fuvp.shape[0]):
-            inputs= fuvp[i, :-1]
-            outputs = fuvp[i, 1:]
+        for i in range(fuv.shape[0]):
+            inputs= fuv[i, :-1]
+            outputs = fuv[i, 1:]
             num_steps = len(inputs)
             for t in range(num_steps):
                 if np.isnan(inputs[t]).any() or np.isnan(outputs[t]).any():
@@ -95,8 +96,8 @@ class NSCHDataset(Dataset):
         #################################################
                         
         #Total frames = The sum of the number of frames for each case
-        self.inputs = torch.stack(self.inputs).float() #(Total frames, x, y, 4)
-        self.labels = torch.stack(self.labels).float() #(Total frames, x, y, 4)
+        self.inputs = torch.stack(self.inputs).float() #(Total frames, x, y, 3)
+        self.labels = torch.stack(self.labels).float() #(Total frames, x, y, 3)
         self.case_ids = np.array(self.case_ids) #(Total frames)
 
         self.masks = torch.ones_like(self.inputs[0,...,0:1]).float() #(x, y, 1)
@@ -107,10 +108,12 @@ class NSCHDataset(Dataset):
             cases, p = self.physic_prop.shape
             _, x, y, _ = self.inputs.shape
             self.physic_prop = self.physic_prop.reshape(cases, 1, 1, p)
-            self.physic_prop = self.physic_prop.repeat(1, x, y, 1) #(cases, x, y, p)
+            self.physic_prop = self.physic_prop.repeat(1, x, y, 1) #(cases, x, y, 3)
+        else:
+            self.physic_prop = torch.from_numpy(physic_prop).float() #(Total cases, 3)
 
         #get grid
-        self.grid = torch.from_numpy(fuvp[0,0,:,:,:2]).float()  # (x, y, 2)
+        self.grid = torch.from_numpy(fuv[0,0,:,:,:2]).float()  # (x, y, 2)
 
         # print(f"shape of inputs: {self.inputs.shape}")
         
