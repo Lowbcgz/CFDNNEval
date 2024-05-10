@@ -129,8 +129,8 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
                         metric_fn = getattr(metrics, name)
                         res_dict[name].append(metric_fn(preds, y))
 
-    NMSE_List = [i.mean().item() for i in res_dict["NMSE"]]
-    plot_loss(NMSE_List, Path(ckpt_dir) / "loss.png")
+    # NMSE_List = [i.mean().item() for i in res_dict["NMSE"]]
+    # plot_loss(NMSE_List, Path(ckpt_dir) / "loss.png")
 
     #reshape
     for name in metric_names:
