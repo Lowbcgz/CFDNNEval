@@ -1,16 +1,14 @@
-import os
 import h5py
 import numpy as np
+import os
 import torch
-import random
-from torch.utils.data import Dataset
-
+from torch.utils.data import Dataset, IterableDataset
 
 class CavityDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',
-                 case_name = 'bc_prop_geo',
+                 case_name = 'ReD_bc_re',
                  reduced_resolution = 1,
                  reduced_batch = 1,
                  data_delta_time = 0.1,
@@ -80,10 +78,25 @@ class CavityDataset(Dataset):
                                 if param_name in ['Vx', 'Vy', 'P', 'grid']:
                                     continue
                                 this_case_params[param_name] = np.array(data[param_name], dtype=np.float32)[0]
+                        
+                        
                         self.case_params_dicts.append(this_case_params)
                         # read some parameters to pad and create mask, Remove some 
                         # parameters that are not used in training，and prepare for normalization 
-    
+                        if norm_props:
+                            self.normalize_physics_props(this_case_params)
+                        if norm_bc:
+                            self.normalize_bc(this_case_params)
+                        
+                        params_keys = [
+                            x for x in this_case_params.keys() if x not in ["rotated", "dx", "dy"]
+                        ]
+                        case_params_vec = []
+                        for k in params_keys:
+                            case_params_vec.append(this_case_params[k])
+                        case_params = torch.tensor(case_params_vec)  #(p)
+                        self.case_params.append(case_params)
+                        
                         #############################################################
                         #load u ,v, p, grid and get mask
                         u, v, p = np.array(data['Vx'], dtype=np.float32), np.array(data['Vy'], np.float32), np.array(data['P'], np.float32)
@@ -114,7 +127,7 @@ class CavityDataset(Dataset):
                             inp_magn = torch.sqrt(inp[:,:,0] ** 2 + inp[:,:,1] ** 2 + inp[:,:,2] ** 2)
                             out_magn = torch.sqrt(out[:,:,0] ** 2 + out[:,:,1] ** 2 + out[:,:,2] ** 2)
                             diff = torch.abs(inp_magn - out_magn).mean()
-                            if diff < stable_state_diff:
+                            if diff < stable_state_diff and i / num_steps > 1 / 10:
                                 print(
                                     f"Converged at {i} out of {num_steps},"
                                     f" {this_case_params}"
@@ -133,39 +146,6 @@ class CavityDataset(Dataset):
 
                         #################################################
                         idx += 1
-
-        #normalize case parameters
-        self.sum_information = {}
-        self.Statistical_information = {}
-        for case_params_dict in self.case_params_dicts:
-            for u, v in case_params_dict.items():
-                if u in self.sum_information:
-                    self.sum_information[u] += v
-                else:
-                    self.sum_information[u] = v
-        
-        for u, v in self.sum_information.items():
-            self.Statistical_information[u + '_mean'] = v / len(self.case_params_dicts)
-            self.Statistical_information[u + '_std'] = 0
-            for case_params_dict in self.case_params_dicts:
-                self.Statistical_information[u + '_std'] += (case_params_dict[u] - self.Statistical_information[u + '_mean']) ** 2
-            self.Statistical_information[u + '_std'] = np.sqrt(self.Statistical_information[u + '_std'] / len(self.case_params_dicts))
-        
-        for this_case_params in self.case_params_dicts:
-            #normalization 
-            if norm_props:
-                self.normalize_physics_props(this_case_params)
-            if norm_bc:
-                self.normalize_bc(this_case_params, "vel_top")
-                
-            params_keys = [
-                x for x in this_case_params.keys() if x not in ["rotated", "dx", "dy"]
-            ]
-            case_params_vec = []
-            for k in params_keys:
-                case_params_vec.append(this_case_params[k])
-            case_params = torch.tensor(case_params_vec)  #(5)
-            self.case_params.append(case_params)    
 
         #Total frames = The sum of the number of frames for each case
         self.inputs = torch.stack(self.inputs).float() #(Total frames, x, y, 3)
@@ -197,24 +177,21 @@ class CavityDataset(Dataset):
         self.case_ids = self.case_ids[:num_samples_max, ...]
         self.masks = self.masks[:num_samples_max, ...]
 
+        print(self.inputs.shape, self.labels.shape, self.case_ids.shape, self.masks.shape, self.case_params.shape)
+
     def normalize_physics_props(self, case_params):
         """
         Normalize the physics properties in-place.
         """
-        if self.Statistical_information['density_std'] != 0:
-            case_params["density"] = (
-                case_params["density"] - self.Statistical_information['density_mean']
-            ) / self.Statistical_information['density_std']
-        if self.Statistical_information['RE_std'] != 0:
-            case_params["RE"] = (
-                case_params["RE"] - self.Statistical_information['RE_mean']
-            ) / self.Statistical_information['RE_std']
+        case_params["RE"] = (
+            case_params["RE"] - 2822.248243559719
+        ) / 3468.165537716764
 
-    def normalize_bc(self, case_params, key):
+    def normalize_bc(self, case_params):
         """
         Normalize the boundary conditions in-place.
         """
-        case_params[key] = (case_params[key] - self.Statistical_information[key + '_mean']) / self.Statistical_information[key + '_std']
+        case_params['vel_top'] = (case_params['vel_top'] - 12.245551723507026) / 15.53312988836465
     
     def __len__(self):
         return len(self.inputs)

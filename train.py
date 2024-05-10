@@ -1,4 +1,5 @@
 import os
+import sys
 import torch
 import numpy as np
 import torch.nn as nn
@@ -13,6 +14,7 @@ from timeit import default_timer
 from utils import setup_seed, get_model, get_dataset, get_dataloader
 from visualize import *
 from dataset import *
+
 
 
 
@@ -389,5 +391,6 @@ if __name__ == "__main__":
 
     setup_seed(args["seed"])
     print(args)
+    breakpoint()
     main(args)
 # print(torch.cuda.device_count())
