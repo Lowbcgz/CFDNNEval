@@ -169,7 +169,8 @@ class TubeDataset(Dataset):
             _, x, y, _ = self.inputs.shape
             self.case_params = self.case_params.reshape(cases, 1, 1, p)
             self.case_params = self.case_params.repeat(1, x, y, 1) #(cases, x, y, p)
-
+        else:
+            self.case_params = torch.stack(self.case_params).float()
 
         #get grid
         grid_x = torch.tensor(np.linspace(0, 1, x), dtype=torch.float)

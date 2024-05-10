@@ -165,7 +165,8 @@ class CavityDataset(Dataset):
             _, x, y, _ = self.inputs.shape
             self.case_params = self.case_params.reshape(cases, 1, 1, p)
             self.case_params = self.case_params.repeat(1, x, y, 1) #(cases, x, y, p)
-
+        else:
+            self.case_params = torch.stack(self.case_params).float()
         
         if num_samples_max>0:
             num_samples_max  = min(num_samples_max,self.inputs.shape[0])
@@ -177,7 +178,7 @@ class CavityDataset(Dataset):
         self.case_ids = self.case_ids[:num_samples_max, ...]
         self.masks = self.masks[:num_samples_max, ...]
 
-        print(self.inputs.shape, self.labels.shape, self.case_ids.shape, self.masks.shape, self.case_params.shape)
+        # print(self.inputs.shape, self.labels.shape, self.case_ids.shape, self.masks.shape, self.case_params.shape)
 
     def normalize_physics_props(self, case_params):
         """

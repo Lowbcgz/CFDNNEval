@@ -14,7 +14,7 @@ epochs: 400
 # 数据集相关参数 
 dataset:
   single_file: True
-  saved_folder: "/home/data2/darcy/"
+  saved_folder: "/data1/FluidData/darcy/"
   reduced_resolution: 1
   reduced_batch: 1
   case_name: 'ar_as'

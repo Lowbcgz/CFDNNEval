@@ -14,12 +14,13 @@ epochs: 100
 # 数据集相关参数 
 dataset:
   single_file: True
-  saved_folder: "/home/data2/two_phase_flow/"
+  saved_folder: "/data1/FluidData/two_phase_flow/"
   reduced_resolution: 1
   reduced_batch: 1
   stable_state_diff: 0.001
   norm_props: True
   case_name: 'bc_ca_mob_phi_pre_re_uv0'
+  multi_step_size: 3
 # dataloader相关参数
 dataloader:
   train_batch_size: 128

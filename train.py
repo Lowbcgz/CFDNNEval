@@ -36,7 +36,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
         y = y * mask
 
         if args["training_type"] in ['autoregressive']:
-            if train_loader.dataset.multi_step_size ==1:
+            if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
                 #Model run one_step
                 if case_params.shape[-1] == 0: #darcy
                     case_params = case_params.reshape(0)

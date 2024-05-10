@@ -15,6 +15,7 @@ class NSCHDataset(Dataset):
                  stable_state_diff = 0.0001,
                  norm_props = True,
                  reshape_parameters = True,
+                 multi_step_size = 1,
                  ):
         
         '''
@@ -32,7 +33,7 @@ class NSCHDataset(Dataset):
         shape:
             (x, y, c), (x, y, c), (x, y, 1), (x, y, p), (x, y, 2), (1)
         '''
-        
+        self.multi_step_size = multi_step_size
         self.case_name = case_name
         self.inputs = []
         self.labels = []
@@ -89,10 +90,12 @@ class NSCHDataset(Dataset):
                 if diff < stable_state_diff:
                     print(f"Converged at {t} in case {i}")
                     break
-                self.inputs.append(torch.from_numpy(inputs[t, :, :, 2:]))
-                self.labels.append(torch.from_numpy(outputs[t, :, :, 2:]))
-                self.case_ids.append(i)
                 
+                if i+1 >= multi_step_size:
+                    self.inputs.append(torch.from_numpy(inputs[i+1-multi_step_size, :,:, 2:], dtype=torch.float32))  
+                    self.labels.append(torch.from_numpy(outputs[i+1-multi_step_size:i+1, :,:,2:], dtype=torch.float32))
+                    self.case_ids.append(i)
+
         #################################################
                         
         #Total frames = The sum of the number of frames for each case

@@ -10,7 +10,7 @@ plot_interval: 1
 # 训练相关参数
 seed: 0
 training_type: "autoregressive"
-epochs: 100
+epochs: 200
 # 数据集相关参数 
 dataset:
   single_file: True
