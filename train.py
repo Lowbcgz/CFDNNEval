@@ -1,4 +1,5 @@
 import os
+import sys
 import torch
 import numpy as np
 import torch.nn as nn
@@ -11,10 +12,12 @@ from functools import reduce
 from functools import partial
 from torch.utils.data import DataLoader
 from timeit import default_timer
+from uno import UNO1d, UNO2d, UNO3d
+sys.path.append("..")
 from utils import *
 from visualize import *
-from uno import UNO1d, UNO2d, UNO3d
 from dataset import *
+
 
 
 def get_dataset(args):
@@ -102,6 +105,39 @@ def get_dataset(args):
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
                                 )
+    elif args['flow_name'] == 'cavity':
+        train_data = CavityDataset(filename=args['flow_name'] + '_train.hdf5',
+                                   saved_folder=dataset_args['saved_folder'],
+                                   case_name=dataset_args['case_name'],
+                                   reduced_resolution=dataset_args["reduced_resolution"],
+                                   reduced_batch=dataset_args["reduced_batch"],
+                                   delta_time=dataset_args['delta_time'],
+                                   stable_state_diff = dataset_args['stable_state_diff'],
+                                   norm_props = dataset_args['norm_props'],
+                                   norm_bc = dataset_args['norm_bc'],
+                                   multi_step_size= dataset_args['multi_step_size']
+                                   )
+        val_data = CavityDataset(filename=args['flow_name'] + '_dev.hdf5',
+                                   saved_folder=dataset_args['saved_folder'],
+                                   case_name=dataset_args['case_name'],
+                                   reduced_resolution=dataset_args["reduced_resolution"],
+                                   reduced_batch=dataset_args["reduced_batch"],
+                                   delta_time=dataset_args['delta_time'],
+                                   stable_state_diff = dataset_args['stable_state_diff'],
+                                   norm_props = dataset_args['norm_props'],
+                                   norm_bc = dataset_args['norm_bc'],
+                                   multi_step_size= dataset_args['multi_step_size']
+                                   )
+        train_data = CavityDataset(filename=args['flow_name'] + '_test.hdf5',
+                                   saved_folder=dataset_args['saved_folder'],
+                                   case_name=dataset_args['case_name'],
+                                   reduced_resolution=dataset_args["reduced_resolution"],
+                                   reduced_batch=dataset_args["reduced_batch"],
+                                   delta_time=dataset_args['delta_time'],
+                                   stable_state_diff = dataset_args['stable_state_diff'],
+                                   norm_props = dataset_args['norm_props'],
+                                   norm_bc = dataset_args['norm_bc'],
+                                   )
     return train_data, val_data, test_data
 
 def get_dataloader(train_data, val_data, test_data, args):
@@ -483,10 +519,22 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config_file", type=str, help="Path to config file")
+    parser.add_argument("--if_training", type=str, default="", help="Decide whether to train or not. If no value is entered, the yaml file shall prevail")
+    parser.add_argument("--case_name", type=str, default="For the case, if no value is entered, the yaml file shall prevail")
     cmd_args = parser.parse_args()
     with open(cmd_args.config_file, 'r') as f:
         args = yaml.safe_load(f)
+    
+    if cmd_args.if_training == 'True':
+        args['if_training'] = True
+    elif cmd_args.if_training == "False":
+        args['if_training'] = False
+    
+    if len(cmd_args.case_name) > 1:
+        args['dataset']['case_name'] = cmd_args.case_name
+
     setup_seed(args["seed"])
     print(args)
+    breakpoint()
     main(args)
 # print(torch.cuda.device_count())
