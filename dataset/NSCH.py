@@ -12,7 +12,7 @@ class NSCHDataset(Dataset):
                  case_name = 'bc_ca_mob_phi_pre_re_uv0',
                  reduced_resolution = 1,
                  reduced_batch = 1,
-                 stable_state_diff = 0.0001,
+                 stable_state_diff = 0.001,
                  norm_props = True,
                  reshape_parameters = True,
                  multi_step_size = 1,
@@ -91,20 +91,23 @@ class NSCHDataset(Dataset):
                     print(f"Converged at {t} in case {i}")
                     break
                 
-                if i+1 >= multi_step_size:
-                    self.inputs.append(torch.from_numpy(inputs[i+1-multi_step_size, :,:, 2:], dtype=torch.float32))  
-                    self.labels.append(torch.from_numpy(outputs[i+1-multi_step_size:i+1, :,:,2:], dtype=torch.float32))
+                if t+1 >= multi_step_size:
+                    self.inputs.append(torch.from_numpy(inputs[t+1-multi_step_size, :,:, 2:]).float())  
+                    self.labels.append(torch.from_numpy(outputs[t+1-multi_step_size:t+1, :,:,2:]).float())
                     self.case_ids.append(i)
 
         #################################################
                         
         #Total frames = The sum of the number of frames for each case
         self.inputs = torch.stack(self.inputs).float() #(Total frames, x, y, 3)
-        self.labels = torch.stack(self.labels).float() #(Total frames, x, y, 3)
+        self.labels = torch.stack(self.labels).float() #(Total frames, multi_step_size, x, y, 3)
         self.case_ids = np.array(self.case_ids) #(Total frames)
 
         self.masks = torch.ones_like(self.inputs[0,...,0:1]).float() #(x, y, 1)
-
+        
+        if self.multi_step_size==1:
+            self.labels = self.labels.squeeze(1)
+        
         if reshape_parameters:
             #process the parameters shape
             self.physic_prop = torch.from_numpy(physic_prop).float() #(Total cases, 3)
@@ -133,8 +136,10 @@ class NSCHDataset(Dataset):
 
     def __getitem__(self, idx):
         input = self.inputs[idx]  # (x, y, 2)
-        label = self.labels[idx]  # (x, y, 2)
+        label = self.labels[idx]  # (multi_step_size, x, y, 2) or (x, y, 2)
         mask = self.masks # (x, y, 1)
+        if self.multi_step_size > 1:
+            mask = mask.unsqueeze(0).repeat(self.multi_step_size, 1, 1, 1)
         case_id = self.case_ids[idx]
         physic_prop = self.physic_prop[case_id] #(x, y, p)
         return input, label, mask, physic_prop, self.grid, case_id

@@ -33,8 +33,8 @@ dataloader:
   pin_memory: False
 # 模型相关参数
 model:
-  input_channel: 2
-  output_channel: 2
+  inputs_channel: 3
+  outputs_channel: 3
   width: 32
   modes: 12
 # 优化器相关参数

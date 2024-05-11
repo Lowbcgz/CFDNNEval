@@ -152,7 +152,7 @@ class CavityDataset(Dataset):
         self.labels = torch.stack(self.labels).float() #(Total frames, x, y, 3)
         self.case_ids = np.array(self.case_ids) #(Total frames)
         self.masks = torch.stack(self.masks).float() #(Total frames, x, y, 1)
-        self.grids = torch.tensor(np.hstack(self.grids)).float()
+        self.grids = torch.tensor(np.stack(self.grids)).float()
 
         if self.multi_step_size==1:
             self.labels = self.labels.squeeze(1)

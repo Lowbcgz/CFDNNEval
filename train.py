@@ -21,7 +21,7 @@ from dataset import *
 def train_loop(model, train_loader, optimizer, loss_fn, device, args):
     model.train()
     t1 = default_timer()
-    train_l2 = 0
+    train_loss = 0
     train_l_inf = 0
     step = 0
     for x, y, mask, case_params, grid, _ in train_loader:
@@ -40,36 +40,39 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
                 #Model run one_step
                 if case_params.shape[-1] == 0: #darcy
                     case_params = case_params.reshape(0)
-                pred = model(x, case_params, mask, grid)
-                # Loss calculation
-                _batch = pred.size(0)
-                loss = loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1))
-
+                # pred = model(x, case_params, mask, grid)
+                # # Loss calculation
+                # _batch = pred.size(0)
+                # loss = loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1))
+                loss, pred , info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
+                
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-
-                train_l2 += loss.item()
+                _batch = pred.size(0)
+                train_loss += loss.item()
                 train_l_inf = max(train_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
             else:
                 # Autoregressive loop
                 preds=[]
+                total_loss = 0
                 for i in range(train_loader.dataset.multi_step_size):
-                    pred = model(x, case_params, mask[:,i], grid)
+                    loss, pred , info= model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], loss_fn=loss_fn)
                     preds.append(pred)
+                    total_loss = total_loss + loss
                     x = pred
                 preds=torch.stack(preds, dim=1)
                 _batch = preds.size(0)
-                loss = loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1))
+                # loss = loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1))
                 optimizer.zero_grad()
-                loss.backward()
+                total_loss.backward()
                 optimizer.step()
 
-                train_l2 += loss.item()
+                train_loss += total_loss.item()
                 train_l_inf = max(train_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
-    train_l2 /= step      
+    train_loss /= step      
     t2 = default_timer()
-    return train_l2, train_l_inf, t2 - t1
+    return train_loss, train_l_inf, t2 - t1
 
 def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoch, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 1):
     model.eval()
@@ -95,7 +98,7 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
 
             if training_type == 'autoregressive':
-                if val_loader.dataset.multi_step_size ==1:
+                if getattr(val_loader.dataset,"multi_step_size", 1)==1:
                 # Autoregressive loop
                     # Model run
                     if case_params.shape[-1] == 0: #darcy
@@ -188,7 +191,7 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
             mask = mask.to(device) # mask [b, x1, ..., xd, 1] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
             
-            if test_loader.dataset.multi_step_size ==1:
+            if getattr(test_loader.dataset,"multi_step_size", 1) ==1:
                 # batch_size = x.size(0)
                 if test_type == 'frames' or prev_case_id == -1:
                     x = x.to(device) # x: input tensor (The previous time step grand truth data) [b, x1, ..., xd, v]
@@ -300,8 +303,9 @@ def main(args):
         model.to(device)
         print("start testing...")
         test_loop(test_loader, model, device, args["training_type"], output_dir, test_type='frames')
-        test_loop(test_loader, model, device, args["training_type"], output_dir, test_type='accumulate')
-        test_loop(test_ms_loader, model, device, args["training_type"], output_dir, test_type='multi_step')
+        if test_ms_data is not None:  # not darcy
+            test_loop(test_ms_loader, model, device, args["training_type"], output_dir, test_type='multi_step')
+            test_loop(test_loader, model, device, args["training_type"], output_dir, test_type='accumulate')
         print("Done") 
         return
     ## if continue training, resume model from checkpoint
@@ -344,11 +348,11 @@ def main(args):
     print("start training...")
     total_time = 0
     for epoch in range(start_epoch, args["epochs"]):
-        train_l2, train_l_inf, time = train_loop(model,train_loader, optimizer, loss_fn, device, args)
+        train_loss, train_l_inf, time = train_loop(model,train_loader, optimizer, loss_fn, device, args)
         scheduler.step()
         total_time += time
-        loss_history.append(train_l2)
-        print(f"[Epoch {epoch}] train_l2: {train_l2}, train_l_inf: {train_l_inf}, time_spend: {time:.3f}")
+        loss_history.append(train_loss)
+        print(f"[Epoch {epoch}] train_loss: {train_loss}, train_l_inf: {train_l_inf}, time_spend: {time:.3f}")
         ## save latest
         model_state_dict = model.module.state_dict() if torch.cuda.device_count() > 1 else model.state_dict()
         torch.save({"epoch": epoch+1, "loss": min_val_loss,
@@ -391,6 +395,5 @@ if __name__ == "__main__":
 
     setup_seed(args["seed"])
     print(args)
-    breakpoint()
     main(args)
 # print(torch.cuda.device_count())

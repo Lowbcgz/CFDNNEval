@@ -59,6 +59,46 @@ def get_dataset(args):
                                 norm_bc = dataset_args['norm_bc'],
                                 multi_step_size= dataset_args['multi_step_size']
                                 )
+    elif args["flow_name"] == "cavity":
+        train_data = CavityDataset(
+                                filename=args['flow_name'] + '_train.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        val_data = CavityDataset(
+                                filename=args['flow_name'] + '_dev.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        test_data = CavityDataset(
+                                filename=args['flow_name'] + '_test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                )
+        test_ms_data = CavityDataset(
+                                filename=args['flow_name'] + '_test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
     elif args["flow_name"] == "NSCH":
         train_data = NSCHDataset(
                                 filename='train.hdf5',
@@ -68,6 +108,7 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
                                 )
         val_data = NSCHDataset(
                                 filename='val.hdf5',
@@ -77,6 +118,7 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
                                 )
         test_data = NSCHDataset(
                                 filename='test.hdf5',
@@ -86,6 +128,56 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
+                                )
+        test_ms_data = NSCHDataset(
+                                filename='test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+    elif args["flow_name"] == "TGV":
+        train_data = TGVDataset(
+                                filename='train.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        val_data = TGVDataset(
+                                filename='val.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        test_data = TGVDataset(
+                                filename='test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                )
+        test_ms_data = TGVDataset(
+                                filename='test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
                                 )
     elif args['flow_name'] == 'Darcy':
         train_data = DarcyDataset(
@@ -109,6 +201,7 @@ def get_dataset(args):
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
                                 )
+        test_ms_data = None
     else:
         raise ValueError("Invalid flow name.")
     print("#Train data: ", len(train_data))
@@ -127,9 +220,12 @@ def get_dataloader(train_data, val_data, test_data, test_ms_data, args):
     test_loader = DataLoader(test_data, shuffle=False, drop_last=True,
                             batch_size=dataloader_args['test_batch_size'],
                             num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
-    test_ms_loader = DataLoader(test_ms_data, shuffle=False, drop_last=True,
-                            batch_size=dataloader_args['test_batch_size'],
-                            num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+    if test_ms_data is not None:
+        test_ms_loader = DataLoader(test_ms_data, shuffle=False, drop_last=True,
+                                batch_size=dataloader_args['test_batch_size'],
+                                num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+    else:
+        test_ms_loader = None
     
     return train_loader, val_loader, test_loader, test_ms_loader
 
@@ -137,13 +233,19 @@ def get_model(spatial_dim, n_case_params, args):
     assert spatial_dim <= 3, "Spatial dimension of data can not exceed 3."
     model_name = args["model_name"]
     model_args = args["model"]
-    if args['flow_name'] in ["Darcy"]:
+    if args['flow_name'] in ["Darcy"]:   # time irrelevant
         if spatial_dim == 2:
             # model = UNO2d(num_channels=model_args["input_channels"],
             #               width=model_args["width"],
             #               n_case_params = n_case_params,
             #               output_channels=model_args["output_channels"])
-            pass
+            if model_name == "FNO": 
+                model = FNO2d(inputs_channel=model_args['inputs_channel'],
+                                outputs_channel=model_args['outputs_channel'],
+                        width = model_args['width'],
+                        modes1 = model_args['modes'],
+                        modes2 = model_args['modes'],
+                        n_case_params = n_case_params)
         else:
             #TODO
             pass

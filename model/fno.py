@@ -249,7 +249,19 @@ class FNO2d(nn.Module):
 
         x = x * mask
         return x
-    
+    def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
+        info = {}
+        pred = self(x, case_params, mask, grid)
+        
+        if loss_fn is not None:
+            ## defined your specific loss calculations here
+            loss = loss_fn(pred, y)
+            return loss, pred, info
+        else:
+            #TODO: default loss_fn
+            pass
+
+
 
 class SpectralConv3d(nn.Module):
     def __init__(self, in_channels, out_channels, modes1, modes2, modes3):

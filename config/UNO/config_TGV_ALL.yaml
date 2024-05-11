@@ -1,4 +1,4 @@
-flow_name: 'cavity'
+flow_name: 'TGV'
 model_name: "UNO"
 if_training: True
 continue_training: False
@@ -14,20 +14,17 @@ epochs: 100
 # 数据集相关参数 
 dataset:
   single_file: True
-  saved_folder: "/data1/FluidData/cavity_reduced/"
+  saved_folder: "/data1/FluidData/taylor_green/"
   reduced_resolution: 1
   reduced_batch: 1
-  data_delta_time: 0.1
-  delta_time: 0.1 
-  stable_state_diff: 0.001
   norm_props: True
-  norm_bc: True  
-  case_name: 'ReD_bc_re'
+  stable_state_diff: 0.001
+  case_name: 'rho_V0_nu'
   multi_step_size: 3
 # dataloader相关参数
 dataloader:
   train_batch_size: 128
-  val_batch_size: 16
+  val_batch_size: 128
   test_batch_size: 1
   num_workers: 4
   pin_memory: False
