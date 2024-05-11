@@ -96,16 +96,20 @@ def print_res(res):
 
 def write_res(res, filename, tag, append=True):
     df = pd.DataFrame()
+    metric, values = next(iter(res.items()))
+    dim = len(values)
     # Iterate over the metrics in res
     for metric, values in res.items():
-        dim = len(values)
         values = [x.item() for x in values]
         if "field" not in df.columns:
             if dim > 1:
                 df.insert(0, 'field', [tag+"_x"+str(k) for k in range(dim)]+[tag + "_mean"])
             else:
                 df.insert(0, 'field', [tag+"_x"+str(k) for k in range(dim)])
-        if dim > 1:
+        
+        if metric == 'Mean inference time' and dim > 1:
+            df[metric] = [*values] * (dim + 1)
+        elif dim > 1:
             df[metric] = [*values]+ [np.mean(values)]
         else:
             df[metric] = [*values]

@@ -27,9 +27,9 @@ dataloader:
   pin_memory: False
 # 模型相关参数
 model:
-  input_channels: 1
-  output_channels: 3
-  width: 30
+  in_channels: 1
+  out_channels: 3
+  width: 32
 # 优化器相关参数
 optimizer:
   name: 'Adam'
