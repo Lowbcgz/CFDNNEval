@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 import random
 # from model.uno import UNO1d, UNO2d, UNO3d
-from model.fno import FNO2d
+from model import FNO2d, LSM_2d
 from dataset import *
 
 def setup_seed(seed):
@@ -246,6 +246,15 @@ def get_model(spatial_dim, n_case_params, args):
                         modes1 = model_args['modes'],
                         modes2 = model_args['modes'],
                         n_case_params = n_case_params)
+            elif model_name == "LSM":
+                model = LSM_2d(inputs_channel=model_args['inputs_channel'],
+                        outputs_channel=model_args['outputs_channel'],
+                        d_model = model_args['width'],
+                        num_token=model_args['num_token'], 
+                        num_basis=model_args['num_basis'], 
+                        patch_size=model_args['patch_size'],
+                        padding=model_args['padding'],
+                        n_case_params = n_case_params)
         else:
             #TODO
             pass
@@ -271,6 +280,16 @@ def get_model(spatial_dim, n_case_params, args):
                       modes1 = model_args['modes'],
                       modes2 = model_args['modes'],
                       n_case_params = n_case_params)
+            if model_name == "LSM":
+                model = LSM_2d(inputs_channel=model_args['inputs_channel'],
+                        outputs_channel=model_args['outputs_channel'],
+                      d_model = model_args['width'],
+                      num_token=model_args['num_token'], 
+                      num_basis=model_args['num_basis'], 
+                      patch_size=model_args['patch_size'],
+                      padding=model_args['padding'],
+                      n_case_params = n_case_params)
+
         elif spatial_dim == 3:
             # model = UNO3d(num_channels=model_args["num_channels"],
             #             width = model_args['width'],
