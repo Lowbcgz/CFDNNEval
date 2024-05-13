@@ -2,8 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import random
-# from model.uno import UNO1d, UNO2d, UNO3d
-from model import FNO2d, LSM_2d, AutoDeepONet
+from model import FNO2d, LSM_2d, AutoDeepONet, UNO2d, KNO2d, UNet2d
 from dataset import *
 
 def setup_seed(seed):
@@ -235,10 +234,6 @@ def get_model(spatial_dim, n_case_params, args):
     model_args = args["model"]
     if args['flow_name'] in ["Darcy"]:   # time irrelevant
         if spatial_dim == 2:
-            # model = UNO2d(num_channels=model_args["input_channels"],
-            #               width=model_args["width"],
-            #               n_case_params = n_case_params,
-            #               output_channels=model_args["output_channels"])
             if model_name == "FNO": 
                 model = FNO2d(inputs_channel=model_args['inputs_channel'],
                                 outputs_channel=model_args['outputs_channel'],
@@ -266,24 +261,23 @@ def get_model(spatial_dim, n_case_params, args):
                         branch_depth=model_args["branch_depth"],
                         act_name=model_args["act_fn"],
                         )
+            elif model_name == 'UNO':
+                model = UNO2d(in_channels=model_args["in_channels"],
+                          out_channels = model_args["out_channels"],
+                          width=model_args["width"],
+                          n_case_params = n_case_params)
+            elif model_name == 'UNet':
+                model = UNet2d(in_channels=model_args['in_channels'],
+                        out_channels=model_args['out_channels'],
+                        init_features=model_args['init_features'],
+                        n_case_params = n_case_params)
         else:
             #TODO
             pass
     else:
         if spatial_dim == 1:
-            # model = UNO1d(num_channels=model_args["num_channels"],
-            #             width=model_args["width"],
-            #             n_case_params = n_case_params)
             pass
         elif spatial_dim == 2:
-            # model = UNO2d(num_channels=model_args['num_channels'],
-            #             width = model_args['width'],
-            #             n_case_params = n_case_params)
-            if model_name == "UNO":
-                # model = UNO2d(num_channels=model_args['num_channels'],
-                #             width = model_args['width'],
-                #             n_case_params = n_case_params)
-                pass
             if model_name == "FNO":
                 model = FNO2d(inputs_channel=model_args['inputs_channel'],
                               outputs_channel=model_args['outputs_channel'],
@@ -291,7 +285,7 @@ def get_model(spatial_dim, n_case_params, args):
                       modes1 = model_args['modes'],
                       modes2 = model_args['modes'],
                       n_case_params = n_case_params)
-            if model_name == "LSM":
+            elif model_name == "LSM":
                 model = LSM_2d(inputs_channel=model_args['inputs_channel'],
                         outputs_channel=model_args['outputs_channel'],
                       d_model = model_args['width'],
@@ -300,21 +294,19 @@ def get_model(spatial_dim, n_case_params, args):
                       patch_size=model_args['patch_size'],
                       padding=model_args['padding'],
                       n_case_params = n_case_params)
-            if model_name == "AutoDeepOnet":
-                model = AutoDeepONet(
-                        branch_dim=model_args['branch_dim'],
-                        trunk_dim =2, # (x,y)
-                        inputs_channel=model_args['inputs_channel'],
-                        out_channel=model_args['outputs_channel'],
-                        width=model_args["deeponet_width"],
-                        trunk_depth=model_args["trunk_depth"],
-                        branch_depth=model_args["branch_depth"],
-                        act_name=model_args["act_fn"],
-                        )
+            elif model_name == 'UNO':
+                model = UNO2d(in_channels=model_args["in_channels"],
+                          out_channels = model_args["out_channels"],
+                          width=model_args["width"],
+                          n_case_params = n_case_params)
+            elif model_name == 'KNO':
+                model = KNO2d(n_case_params=n_case_params, **model_args)
+            elif model_name == 'UNet':
+                model = UNet2d(in_channels=model_args['in_channels'],
+                        out_channels=model_args['out_channels'],
+                        init_features=model_args['init_features'],
+                        n_case_params = n_case_params)
 
         elif spatial_dim == 3:
-            # model = UNO3d(num_channels=model_args["num_channels"],
-            #             width = model_args['width'],
-            #             n_case_params = n_case_params)
             pass
     return model

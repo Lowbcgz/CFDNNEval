@@ -7,9 +7,6 @@ import torch.nn.functional as F
 import yaml
 import argparse
 import metrics
-# import tqdm
-# from functools import reduce
-# from functools import partial
 from timeit import default_timer
 from utils import setup_seed, get_model, get_dataset, get_dataloader
 from visualize import *
@@ -238,7 +235,9 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
             #     plot_stream_line(pred = pred, label = y, grid = grid, out_dir = streamline_dir, step=step)
             
     t2 = default_timer()
-    print("averge time: {0:.3f} s".format((t2-t1)/len(test_loader.dataset)))
+    Mean_inference_time = (t2-t1)/len(test_loader.dataset)
+
+    print("averge time: {0:.3f} s".format(Mean_inference_time))
     # NMSE_List = [i.mean().item() for i in res_dict["NMSE"]]
     # plot_loss(NMSE_List, Path(ckpt_dir) / "loss.png")
 
@@ -252,6 +251,7 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
             res = torch.cat(res_list, dim=0)
             res = torch.mean(res, dim=0)
         res_dict[name] = res
+    res_dict['Mean inference time'] = torch.tensor([Mean_inference_time])
     metrics.print_res(res_dict)
     metrics.write_res(res_dict, 
                       os.path.join(args["output_dir"],args["model_name"]+test_type + '_results.csv'),

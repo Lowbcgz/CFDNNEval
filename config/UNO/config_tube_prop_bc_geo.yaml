@@ -10,7 +10,7 @@ plot_interval: 1
 # 训练相关参数
 seed: 0
 training_type: "autoregressive"
-epochs: 100
+epochs: 200
 # 数据集相关参数 
 dataset:
   single_file: True
@@ -33,8 +33,9 @@ dataloader:
   pin_memory: False
 # 模型相关参数
 model:
-  num_channels: 2
-  width: 30
+  in_channels: 2
+  out_channels: 2
+  width: 32
 # 优化器相关参数
 optimizer:
   name: 'Adam'

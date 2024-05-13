@@ -1,5 +1,5 @@
 flow_name: 'cavity'
-model_name: "UNO"
+model_name: "KNO"
 if_training: True
 continue_training: False
 model_path: null
@@ -35,7 +35,11 @@ dataloader:
 model:
   in_channels: 3
   out_channels: 3
+  autoencoder: 'Conv'
   width: 32
+  modes_x: 16
+  modes_y: 16
+  decompose: 8
 # 优化器相关参数
 optimizer:
   name: 'Adam'
