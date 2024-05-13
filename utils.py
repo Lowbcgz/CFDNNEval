@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 import random
 # from model.uno import UNO1d, UNO2d, UNO3d
-from model import FNO2d, LSM_2d
+from model import FNO2d, LSM_2d, AutoDeepONet
 from dataset import *
 
 def setup_seed(seed):
@@ -255,6 +255,17 @@ def get_model(spatial_dim, n_case_params, args):
                         patch_size=model_args['patch_size'],
                         padding=model_args['padding'],
                         n_case_params = n_case_params)
+            elif model_name == "AutoDeepOnet":
+                model = AutoDeepONet(
+                        branch_dim=model_args['branch_dim'],
+                        trunk_dim =2, # (x,y)
+                        inputs_channel=model_args['inputs_channel'],
+                        out_channel=model_args['outputs_channel'],
+                        width=model_args["deeponet_width"],
+                        trunk_depth=model_args["trunk_depth"],
+                        branch_depth=model_args["branch_depth"],
+                        act_name=model_args["act_fn"],
+                        )
         else:
             #TODO
             pass
@@ -289,6 +300,17 @@ def get_model(spatial_dim, n_case_params, args):
                       patch_size=model_args['patch_size'],
                       padding=model_args['padding'],
                       n_case_params = n_case_params)
+            if model_name == "AutoDeepOnet":
+                model = AutoDeepONet(
+                        branch_dim=model_args['branch_dim'],
+                        trunk_dim =2, # (x,y)
+                        inputs_channel=model_args['inputs_channel'],
+                        out_channel=model_args['outputs_channel'],
+                        width=model_args["deeponet_width"],
+                        trunk_depth=model_args["trunk_depth"],
+                        branch_depth=model_args["branch_depth"],
+                        act_name=model_args["act_fn"],
+                        )
 
         elif spatial_dim == 3:
             # model = UNO3d(num_channels=model_args["num_channels"],
