@@ -65,7 +65,7 @@ def NMSE(pred, target):
     target = target.permute(temp_shape) # (bs, x1, ..., xd, v) -> (bs, v, x1, ..., xd)
     nb, nc = pred.shape[0], pred.shape[1]
     errors = pred.reshape([nb, nc, -1]) - target.reshape([nb, nc, -1]) # (bs, v, x1*x2*...*xd*t)
-    norm = pred.reshape([nb, nc, -1])
+    norm = target.reshape([nb, nc, -1])
     res = torch.sum(errors**2, dim=2) / torch.sum(norm**2, dim=2)
     return res
 
