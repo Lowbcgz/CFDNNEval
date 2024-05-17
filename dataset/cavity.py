@@ -45,7 +45,6 @@ class CavityDataset(Dataset):
         self.multi_step_size = multi_step_size
         self.inputs = []
         self.labels = []
-        self.case_params_dicts = []
         self.case_params = []
         self.case_ids = []
         self.masks = []
@@ -81,10 +80,8 @@ class CavityDataset(Dataset):
                                     continue
                                 this_case_params[param_name] = np.array(data[param_name], dtype=np.float32)[0]
                         
-                        
-                        self.case_params_dicts.append(this_case_params)
-                        
-                        
+                        if this_case_params['RE'] < 50 or this_case_params['RE'] > 5000:
+                            continue
                         
                         #############################################################
                         #load u ,v, p, grid and get mask
