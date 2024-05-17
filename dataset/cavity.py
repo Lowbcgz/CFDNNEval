@@ -80,7 +80,7 @@ class CavityDataset(Dataset):
                                     continue
                                 this_case_params[param_name] = np.array(data[param_name], dtype=np.float32)[0]
                         
-                        if this_case_params['RE'] < 50 or this_case_params['RE'] > 5000:
+                        if name == 'ReD' and (this_case_params['RE'] < 50 or this_case_params['RE'] > 5000):
                             continue
                         
                         #############################################################
