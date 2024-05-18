@@ -8,10 +8,8 @@
 # CUDA_VISIBLE_DEVICES=0 python train.py ./config/FNO/config_tube_prop_bc_geo.yaml -c prop_bc_geo --test | tee ./log/test/FNO_tube_prop_bc_geo.out
 
 # TGV
-# CUDA_VISIBLE_DEVICES=0 python train.py ./config/FNO/config_TGV_ALL.yaml -c rho_V0_nu --test | tee ./log/test/FNO_tgv_rho_V0_nu.out
-# CUDA_VISIBLE_DEVICES=0 python train.py ./config/FNO/config_TGV_ALL.yaml -c rho --test | tee ./log/test/FNO_tgv_rho.out
-# CUDA_VISIBLE_DEVICES=0 python train.py ./config/FNO/config_TGV_ALL.yaml -c V0 --test | tee ./log/test/FNO_tgv_V0.out
-# CUDA_VISIBLE_DEVICES=0 python train.py ./config/FNO/config_TGV_ALL.yaml -c nu --test | tee ./log/test/FNO_tgv_nu.out
+CUDA_VISIBLE_DEVICES=4 python train.py ./config/FNO/config_TGV_all.yaml -c all --test | tee ./log/test/FNO_tgv_all.out
+CUDA_VISIBLE_DEVICES=4 python train.py ./config/FNO/config_TGV_all.yaml -c single --test | tee ./log/test/FNO_tgv_single.out
 
 # cavity
 # CUDA_VISIBLE_DEVICES=0 python train.py ./config/FNO/config_cavity_ReD_bc_re.yaml -c ReD --test | tee ./log/test/FNO_cavity_ReD.out

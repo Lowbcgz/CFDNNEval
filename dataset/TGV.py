@@ -7,7 +7,7 @@ class TGVDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',
-                 case_name = 'rho_V0_nu',
+                 case_name = 'all',
                  reduced_resolution = 1,
                  reduced_batch = 1,
                  num_samples_max = -1,
@@ -40,20 +40,20 @@ class TGVDataset(Dataset):
                     data_group = f[name]
                     uvp_list.append(np.array(data_group["uvp"],dtype=np.float32))
                     re_list.append(np.array(data_group["Re"],dtype=np.float32))
-                    V0_list.append(np.array(data_group["V0"],dtype=np.float32))
+                    
                     edge_list.append(np.array(data_group["edge"],dtype=np.float32))
                     nu_list.append(np.array(data_group["nu"],dtype=np.float32))
-                    rho_list.append(np.array(data_group["rho"],dtype=np.float32))
+                    
 
         uvp=np.concatenate(uvp_list,axis=0)[::reduced_batch]
         re=np.concatenate(re_list,axis=0)[::reduced_batch]
-        V0=np.concatenate(V0_list,axis=0)[::reduced_batch]
+        
         edge=np.concatenate(edge_list,axis=0)[::reduced_batch]
         nu=np.concatenate(nu_list,axis=0)[::reduced_batch]
-        rho=np.concatenate(rho_list,axis=0)[::reduced_batch]
+        
 
 
-        physic_prop= np.stack([re,V0,edge,nu,rho],axis=-1) # (B, 5)
+        physic_prop= np.stack([re,edge,nu],axis=-1) # (B, 3)
         if norm_props:
             self.normalize_physics_props(physic_prop)
 
@@ -96,7 +96,7 @@ class TGVDataset(Dataset):
             
         #process the parameters shape
         if reshape_parameters:
-            self.physic_prop = torch.from_numpy(physic_prop).float() #(Total cases, 5)
+            self.physic_prop = torch.from_numpy(physic_prop).float() #(Total cases, 3)
             cases, p = self.physic_prop.shape
             _, x, y, _ = self.inputs.shape
             self.physic_prop = self.physic_prop.reshape(cases, 1, 1, p)
@@ -126,7 +126,7 @@ class TGVDataset(Dataset):
         """
         Normalize the physics properties in-place.
         """
-        physic_prop = physic_prop/np.array([1000.0,50.0,1.0,1.0,200.0])  #re,V0,edge,nu,rho
+        physic_prop = physic_prop/np.array([1000.0,15.707,1.0])  #re,edge,nu
         
     
     def __len__(self):

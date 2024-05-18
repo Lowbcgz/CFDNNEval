@@ -1,5 +1,5 @@
 flow_name: 'TGV'
-model_name: "UNet"
+model_name: "UNO"
 if_training: True
 continue_training: False
 model_path: null
@@ -18,8 +18,8 @@ dataset:
   reduced_resolution: 1
   reduced_batch: 1
   norm_props: True
-  stable_state_diff: 0.001
-  case_name: 'rho_V0_nu'
+  stable_state_diff: 0.0001
+  case_name: 'all'
   multi_step_size: 3
 # dataloader相关参数
 dataloader:
@@ -32,7 +32,7 @@ dataloader:
 model:
   in_channels: 3
   out_channels: 3
-  init_features: 12
+  width: 32
 # 优化器相关参数
 optimizer:
   name: 'Adam'

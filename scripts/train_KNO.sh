@@ -8,10 +8,9 @@ CUDA_VISIBLE_DEVICES=7 python train.py ./config/KNO/config_tube_prop_bc_geo.yaml
 CUDA_VISIBLE_DEVICES=7 python train.py ./config/KNO/config_tube_prop_bc_geo.yaml -c prop_bc_geo | tee ./log/train/KNO_tube_prop_bc_geo.out
 
 # TGV
-CUDA_VISIBLE_DEVICES=7 python train.py ./config/KNO/config_TGV_ALL.yaml -c rho_V0_nu | tee ./log/train/KNO_tgv_rho_V0_nu.out
-CUDA_VISIBLE_DEVICES=7 python train.py ./config/KNO/config_TGV_ALL.yaml -c rho | tee ./log/train/KNO_tgv_rho.out
-CUDA_VISIBLE_DEVICES=7 python train.py ./config/KNO/config_TGV_ALL.yaml -c V0 | tee ./log/train/KNO_tgv_V0.out
-CUDA_VISIBLE_DEVICES=7 python train.py ./config/KNO/config_TGV_ALL.yaml -c nu | tee ./log/train/KNO_tgv_nu.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/KNO/config_TGV_all.yaml -c all | tee ./log/train/KNO_tgv_all.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/KNO/config_TGV_all.yaml -c single | tee ./log/train/KNO_tgv_single.out
+
 
 # cavity
 CUDA_VISIBLE_DEVICES=7 python train.py ./config/KNO/config_cavity_ReD_bc_re.yaml -c ReD | tee ./log/train/KNO_cavity_ReD.out

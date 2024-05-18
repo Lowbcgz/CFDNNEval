@@ -8,10 +8,9 @@ CUDA_VISIBLE_DEVICES=7 python train.py ./config/UNet/config_tube_prop_bc_geo.yam
 CUDA_VISIBLE_DEVICES=7 python train.py ./config/UNet/config_tube_prop_bc_geo.yaml -c prop_bc_geo | tee ./log/train/UNet_tube_prop_bc_geo.out
 
 # TGV
-CUDA_VISIBLE_DEVICES=7 python train.py ./config/UNet/config_TGV_ALL.yaml -c rho_V0_nu | tee ./log/train/UNet_tgv_rho_V0_nu.out
-CUDA_VISIBLE_DEVICES=7 python train.py ./config/UNet/config_TGV_ALL.yaml -c rho | tee ./log/train/UNet_tgv_rho.out
-CUDA_VISIBLE_DEVICES=7 python train.py ./config/UNet/config_TGV_ALL.yaml -c V0 | tee ./log/train/UNet_tgv_V0.out
-CUDA_VISIBLE_DEVICES=7 python train.py ./config/UNet/config_TGV_ALL.yaml -c nu | tee ./log/train/UNet_tgv_nu.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/UNet/config_TGV_all.yaml -c all | tee ./log/train/UNet_tgv_all.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/UNet/config_TGV_all.yaml -c single | tee ./log/train/UNet_tgv_single.out
+
 
 # cavity
 CUDA_VISIBLE_DEVICES=7 python train.py ./config/UNet/config_cavity_ReD_bc_re.yaml -c ReD | tee ./log/train/UNet_cavity_ReD.out
