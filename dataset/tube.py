@@ -69,27 +69,16 @@ class TubeDataset(Dataset):
                         data = data_group[case]
                         ###################################################################
                         #load parameters
+                        # read some parameters to pad and create mask, Remove some 
+                        # parameters that are not used in training，and normalization 
                         this_case_params = {}
                         for param_name in data.keys():
                                 if param_name in ['Vx', 'Vy']:
                                     continue
                                 this_case_params[param_name] = np.array(data[param_name], dtype=np.float32)[0]
-                        # read some parameters to pad and create mask, Remove some 
-                        # parameters that are not used in training，and normalization 
+                        
                            
-                        if norm_props:
-                            self.normalize_physics_props(this_case_params)
-                        if norm_bc:
-                            self.normalize_bc(this_case_params, "vel_in")
-                               
-                        keys = [
-                            x for x in this_case_params.keys() if x not in ["rotated", "dx", "dy"]
-                        ]
-                        case_params_vec = []
-                        for k in keys:
-                            case_params_vec.append(this_case_params[k])
-                        case_params = torch.tensor(case_params_vec)  #(p)
-                        self.case_params.append(case_params)
+                        
 
                         #############################################################
                         #load u and v, and get mask
@@ -150,6 +139,20 @@ class TubeDataset(Dataset):
                                 #If each frame has a different mask, it needs to be rewritten 
                                 self.masks.append(mask[i+1-multi_step_size:i+1, ...].unsqueeze(-1))
 
+                        #norm props
+                        if norm_props:
+                            self.normalize_physics_props(this_case_params)
+                        if norm_bc:
+                            self.normalize_bc(this_case_params, "vel_in")
+                               
+                        keys = [
+                            x for x in this_case_params.keys() if x not in ["rotated", "dx", "dy"]
+                        ]
+                        case_params_vec = []
+                        for k in keys:
+                            case_params_vec.append(this_case_params[k])
+                        case_params = torch.tensor(case_params_vec)  #(p)
+                        self.case_params.append(case_params)
                         #################################################
                         idx += 1
                         

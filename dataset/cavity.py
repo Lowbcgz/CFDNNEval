@@ -45,7 +45,6 @@ class CavityDataset(Dataset):
         self.multi_step_size = multi_step_size
         self.inputs = []
         self.labels = []
-        self.case_params_dicts = []
         self.case_params = []
         self.case_ids = []
         self.masks = []
@@ -73,29 +72,16 @@ class CavityDataset(Dataset):
                         data_keys.sort()
                         ###################################################################
                         #load parameters
+                        # read some parameters to pad and create mask, Remove some 
+                        # parameters that are not used in training，and prepare for normalization 
                         this_case_params = {}
                         for param_name in data_keys:
                                 if param_name in ['Vx', 'Vy', 'P', 'grid']:
                                     continue
                                 this_case_params[param_name] = np.array(data[param_name], dtype=np.float32)[0]
                         
-                        
-                        self.case_params_dicts.append(this_case_params)
-                        # read some parameters to pad and create mask, Remove some 
-                        # parameters that are not used in training，and prepare for normalization 
-                        if norm_props:
-                            self.normalize_physics_props(this_case_params)
-                        if norm_bc:
-                            self.normalize_bc(this_case_params)
-                        
-                        params_keys = [
-                            x for x in this_case_params.keys() if x not in ["rotated", "dx", "dy"]
-                        ]
-                        case_params_vec = []
-                        for k in params_keys:
-                            case_params_vec.append(this_case_params[k])
-                        case_params = torch.tensor(case_params_vec)  #(p)
-                        self.case_params.append(case_params)
+                        if name == 'ReD' and (this_case_params['RE'] < 50 or this_case_params['RE'] > 5000):
+                            continue
                         
                         #############################################################
                         #load u ,v, p, grid and get mask
@@ -143,7 +129,20 @@ class CavityDataset(Dataset):
                                 #mask
                                 #If each frame has a different mask, it needs to be rewritten 
                                 self.masks.append(mask[i+1-multi_step_size:i+1, ...].unsqueeze(-1))
-
+                        #norm props
+                        if norm_props:
+                            self.normalize_physics_props(this_case_params)
+                        if norm_bc:
+                            self.normalize_bc(this_case_params)
+                        
+                        params_keys = [
+                            x for x in this_case_params.keys() if x not in ["rotated", "dx", "dy"]
+                        ]
+                        case_params_vec = []
+                        for k in params_keys:
+                            case_params_vec.append(this_case_params[k])
+                        case_params = torch.tensor(case_params_vec)  #(p)
+                        self.case_params.append(case_params)
                         #################################################
                         idx += 1
 
