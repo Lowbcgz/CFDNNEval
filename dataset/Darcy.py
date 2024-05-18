@@ -128,7 +128,7 @@ class PDEDarcyDataset(Dataset):
                 inputs = f["nu"][:train_size:reduced_batch, ::reduced_resolution, ::reduced_resolution]
                 label = f["tensor"][:train_size:reduced_batch, :, ::reduced_resolution, ::reduced_resolution]
             elif split == "val":
-                inputs = f["nu"][train_size:train_size+val_size:reduced_batch, ::reduced_resolution]
+                inputs = f["nu"][train_size:train_size+val_size:reduced_batch, ::reduced_resolution, ::reduced_resolution]
                 label = f["tensor"][train_size:train_size+val_size:reduced_batch, :, ::reduced_resolution, ::reduced_resolution]
             else:
                 inputs = f["nu"][train_size+val_size::reduced_batch, ::reduced_resolution, ::reduced_resolution]
