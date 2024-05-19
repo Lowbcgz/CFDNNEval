@@ -13,7 +13,6 @@ training_type: "autoregressive"
 epochs: 400
 # 数据集相关参数 
 dataset:
-  single_file: True
   saved_folder: "/data1/FluidData/darcy/"
   reduced_resolution: 1
   reduced_batch: 1

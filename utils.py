@@ -191,27 +191,33 @@ def get_dataset(args):
         else:
             test_ms_data = None
     elif args['flow_name'] == 'Darcy':
-        train_data = DarcyDataset(
-                                filename=args['flow_name'] + '_train.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                )
-        val_data = DarcyDataset(
-                                filename=args['flow_name'] + '_dev.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                )
-        test_data = DarcyDataset(
-                                filename=args['flow_name'] + '_test.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                )
+        if dataset_args["case_name"] == "PDEBench":
+            dataset_args.pop("case_name")
+            train_data = PDEDarcyDataset(split="train", **dataset_args)
+            val_data = PDEDarcyDataset(split="val", **dataset_args)
+            test_data = PDEDarcyDataset(split="test", **dataset_args)
+        else:
+            train_data = DarcyDataset(
+                                    filename=args['flow_name'] + '_train.hdf5',
+                                    saved_folder=dataset_args['saved_folder'],
+                                    case_name=dataset_args['case_name'],
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reduced_batch=dataset_args["reduced_batch"],
+                                    )
+            val_data = DarcyDataset(
+                                    filename=args['flow_name'] + '_dev.hdf5',
+                                    saved_folder=dataset_args['saved_folder'],
+                                    case_name=dataset_args['case_name'],
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reduced_batch=dataset_args["reduced_batch"],
+                                    )
+            test_data = DarcyDataset(
+                                    filename=args['flow_name'] + '_test.hdf5',
+                                    saved_folder=dataset_args['saved_folder'],
+                                    case_name=dataset_args['case_name'],
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reduced_batch=dataset_args["reduced_batch"],
+                                    )
         test_ms_data = None
     else:
         raise ValueError("Invalid flow name.")

@@ -13,7 +13,6 @@ training_type: "autoregressive"
 epochs: 100
 # 数据集相关参数 
 dataset:
-  single_file: True
   saved_folder: "/data1/FluidData/taylor_green/"
   reduced_resolution: 1
   reduced_batch: 1
