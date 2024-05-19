@@ -90,7 +90,7 @@ class CavityDataset(Dataset):
                         v = v[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
                         p = p[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
                         #grid
-                        grid = np.array(data['grid'], np.float32)
+                        grid = np.array(data['grid'][::reduced_resolution, ::reduced_resolution], np.float32)
                         self.grids.append(grid)
                         ### mask
                         mask = np.ones_like(u)
