@@ -47,7 +47,8 @@ def get_dataset(args):
                                 norm_props = dataset_args['norm_props'],
                                 norm_bc = dataset_args['norm_bc']
                                 )
-        test_ms_data = TubeDataset(filename=args['flow_name'] + '_test.hdf5',
+        if dataset_args['multi_step_size'] > 1:
+            test_ms_data = TubeDataset(filename=args['flow_name'] + '_test.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
@@ -58,6 +59,8 @@ def get_dataset(args):
                                 norm_bc = dataset_args['norm_bc'],
                                 multi_step_size= dataset_args['multi_step_size']
                                 )
+        else:
+            test_ms_data = None
     elif args["flow_name"] == "cavity":
         train_data = CavityDataset(
                                 filename=args['flow_name'] + '_train.hdf5',
@@ -88,16 +91,19 @@ def get_dataset(args):
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 )
-        test_ms_data = CavityDataset(
-                                filename=args['flow_name'] + '_test.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
-                                norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+        if dataset_args['multi_step_size'] > 1:
+            test_ms_data = CavityDataset(
+                                    filename=args['flow_name'] + '_test.hdf5',
+                                    saved_folder=dataset_args['saved_folder'],
+                                    case_name=dataset_args['case_name'],
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reduced_batch=dataset_args["reduced_batch"],
+                                    stable_state_diff = dataset_args['stable_state_diff'],
+                                    norm_props = dataset_args['norm_props'],
+                                    multi_step_size= dataset_args['multi_step_size']
                                 )
+        else:
+            test_ms_data = None
     elif args["flow_name"] == "NSCH":
         train_data = NSCHDataset(
                                 filename='train.hdf5',
@@ -128,16 +134,19 @@ def get_dataset(args):
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 )
-        test_ms_data = NSCHDataset(
-                                filename='test.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
-                                norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
-                                )
+        if dataset_args['multi_step_size'] > 1:
+            test_ms_data = NSCHDataset(
+                                    filename='test.hdf5',
+                                    saved_folder=dataset_args['saved_folder'],
+                                    case_name=dataset_args['case_name'],
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reduced_batch=dataset_args["reduced_batch"],
+                                    stable_state_diff = dataset_args['stable_state_diff'],
+                                    norm_props = dataset_args['norm_props'],
+                                    multi_step_size= dataset_args['multi_step_size']
+                                    )
+        else:
+            test_ms_data = None
     elif args["flow_name"] == "TGV":
         train_data = TGVDataset(
                                 filename='train.hdf5',
@@ -168,16 +177,19 @@ def get_dataset(args):
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 )
-        test_ms_data = TGVDataset(
-                                filename='test.hdf5',
-                                saved_folder=dataset_args['saved_folder'],
-                                case_name=dataset_args['case_name'],
-                                reduced_resolution=dataset_args["reduced_resolution"],
-                                reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
-                                norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
-                                )
+        if dataset_args['multi_step_size'] > 1:
+            test_ms_data = TGVDataset(
+                                    filename='test.hdf5',
+                                    saved_folder=dataset_args['saved_folder'],
+                                    case_name=dataset_args['case_name'],
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reduced_batch=dataset_args["reduced_batch"],
+                                    stable_state_diff = dataset_args['stable_state_diff'],
+                                    norm_props = dataset_args['norm_props'],
+                                    multi_step_size= dataset_args['multi_step_size']
+                                    )
+        else:
+            test_ms_data = None
     elif args['flow_name'] == 'Darcy':
         train_data = DarcyDataset(
                                 filename=args['flow_name'] + '_train.hdf5',
@@ -210,19 +222,28 @@ def get_dataset(args):
 
 def get_dataloader(train_data, val_data, test_data, test_ms_data, args):
     dataloader_args = args["dataloader"]
-    train_loader = DataLoader(train_data, shuffle=True, multiprocessing_context = 'spawn', generator=torch.Generator(device = 'cpu'), 
-                              batch_size=dataloader_args['train_batch_size'], 
-                              num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
-    val_loader = DataLoader(val_data, shuffle=False, multiprocessing_context = 'spawn', generator=torch.Generator(device = 'cpu'), 
-                            batch_size=dataloader_args['val_batch_size'],
-                            num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+    if dataloader_args['num_workers'] > 0:
+        train_loader = DataLoader(train_data, shuffle=True, multiprocessing_context = 'spawn', generator=torch.Generator(device = 'cpu'), 
+                                batch_size=dataloader_args['train_batch_size'], 
+                                num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+        val_loader = DataLoader(val_data, shuffle=False, multiprocessing_context = 'spawn', generator=torch.Generator(device = 'cpu'), 
+                                batch_size=dataloader_args['val_batch_size'],
+                                num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+    else:
+        train_loader = DataLoader(train_data, shuffle=True,
+                                batch_size=dataloader_args['train_batch_size'],
+                                num_workers= 0, pin_memory=dataloader_args['pin_memory'])
+        val_loader = DataLoader(val_data, shuffle=False,
+                                batch_size=dataloader_args['val_batch_size'],
+                                num_workers= 0, pin_memory=dataloader_args['pin_memory'])
+    
     test_loader = DataLoader(test_data, shuffle=False, drop_last=True,
                             batch_size=dataloader_args['test_batch_size'],
-                            num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+                            num_workers= 0, pin_memory=dataloader_args['pin_memory'])
     if test_ms_data is not None:
         test_ms_loader = DataLoader(test_ms_data, shuffle=False, drop_last=True,
                                 batch_size=dataloader_args['test_batch_size'],
-                                num_workers= dataloader_args['num_workers'], pin_memory=dataloader_args['pin_memory'])
+                                num_workers=0, pin_memory=dataloader_args['pin_memory'])
     else:
         test_ms_loader = None
     

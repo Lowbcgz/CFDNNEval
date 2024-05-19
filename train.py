@@ -76,9 +76,16 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
     val_l2 = 0
     val_l_inf = 0
     step = 0
-    res_dict = {}
+    
+    res_dict = {"cw_res":{},  # channel-wise
+                "sw_res":{},}  # sample-wise
+    # input_loss_dict={}
+    # pred_loss_dict={}
     for name in metric_names:
-        res_dict[name] = []
+        res_dict["cw_res"][name] = []
+        res_dict["sw_res"][name] = []
+        # input_loss_dict[name] = []
+        # pred_loss_dict[name]=[]
     
     ckpt_dir = output_dir + f"/ckpt-{epoch}"
     if not os.path.exists(ckpt_dir):
@@ -93,10 +100,9 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
             grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims]
             mask = mask.to(device) # mask [b, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
-
+            y = y * mask
             if training_type == 'autoregressive':
                 if getattr(val_loader.dataset,"multi_step_size", 1)==1:
-                # Autoregressive loop
                     # Model run
                     if case_params.shape[-1] == 0: #darcy
                         case_params = case_params.reshape(0)
@@ -106,10 +112,17 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
 
                     val_l2 += loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1)).item()
                     val_l_inf = max(val_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+                    
+                    # pred_loss_dict["MSE"].append(loss_fn(pred, y).cpu().detach())
+                    # pred_loss_dict["NMSE"].append((loss_fn(pred, y)/y.square().mean()).cpu().detach())
+                    # input_loss_dict["MSE"].append(loss_fn(x[...,:1], y[..., :1]).cpu().detach())
+                    # input_loss_dict["NMSE"].append((loss_fn(x[..., :1], y[..., :1])/y[..., :1].square().mean()).cpu().detach())
 
                     for name in metric_names:
                         metric_fn = getattr(metrics, name)
-                        res_dict[name].append(metric_fn(pred, y))
+                        cw, sw=metric_fn(pred, y)
+                        res_dict["cw_res"][name].append(cw)
+                        res_dict["sw_res"][name].append(sw)
                     
                     # if step % plot_interval == 0:
                     #     image_dir = Path(ckpt_dir + "/images")
@@ -129,21 +142,28 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
                     val_l_inf = max(val_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
                     for name in metric_names:
                         metric_fn = getattr(metrics, name)
-                        res_dict[name].append(metric_fn(preds, y))
+                        cw, sw=metric_fn(preds, y)
+                        res_dict["cw_res"][name].append(cw)
+                        res_dict["sw_res"][name].append(sw)
 
-    # NMSE_List = [i.mean().item() for i in res_dict["NMSE"]]
-    # plot_loss(NMSE_List, Path(ckpt_dir) / "loss.png")
+
 
     #reshape
     for name in metric_names:
-        res_list = res_dict[name]
+        cw_res_list = res_dict["cw_res"][name]
+        sw_res_list = res_dict["sw_res"][name]
         if name == "MaxError":
-            res = torch.stack(res_list, dim=0)
-            res, _ = torch.max(res, dim=0)
+            cw_res = torch.stack(cw_res_list, dim=0)
+            cw_res, _ = torch.max(cw_res, dim=0)
+            sw_res = torch.stack(sw_res_list)
+            sw_res = torch.max(sw_res)
         else:
-            res = torch.cat(res_list, dim=0)
-            res = torch.mean(res, dim=0)
-        res_dict[name] = res
+            cw_res = torch.cat(cw_res_list, dim=0)
+            cw_res = torch.mean(cw_res, dim=0)
+            sw_res = torch.cat(sw_res_list, dim=0)
+            sw_res = torch.mean(sw_res, dim=0)
+        res_dict["cw_res"][name] = cw_res
+        res_dict["sw_res"][name] = sw_res
     metrics.print_res(res_dict)
 
     val_l2 /= step
@@ -164,15 +184,19 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
         raise("test type error, plz set it as 'frames', 'accumulate' or 'multi_step'")
 
     
-    res_dict = {}
+    res_dict = {"cw_res":{},  # channel-wise
+                "sw_res":{},}  # sample-wise
     for name in metric_names:
-        res_dict[name] = []
+        res_dict["cw_res"][name] = []
+        res_dict["sw_res"][name] = []
     
     ckpt_dir = "./test/" + test_type + '/' + args["flow_name"] + '_' + args['dataset']['case_name']
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
 
     prev_case_id = -1
+    preds = []
+    gts = []
     t1 = default_timer()
     with torch.no_grad():
         for x, y, mask, case_params, grid, case_id in test_loader:
@@ -187,22 +211,42 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
             grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims] 
             mask = mask.to(device) # mask [b, x1, ..., xd, 1] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
-            
+            y = y * mask
             if getattr(test_loader.dataset,"multi_step_size", 1) ==1:
                 # batch_size = x.size(0)
-                if test_type == 'frames' or prev_case_id == -1:
+                if test_type == 'frames':
                     x = x.to(device) # x: input tensor (The previous time step grand truth data) [b, x1, ..., xd, v]
-                elif test_type == 'accumulate' and prev_case_id != -1:
-                    x = pred.detach().clone() # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
+                elif test_type == 'accumulate': 
+                    if prev_case_id == -1:
+                        # new case start
+                        if len(preds)> 0: 
+                            preds=torch.stack(preds, dim=1)   # [1, t, x1, ...,xd, v]
+                            gts = torch.stack(gts, dim=1) # [1, t, x1, ...,xd, v]
+                            for name in metric_names:
+                                metric_fn = getattr(metrics, name)
+                                cw, sw=metric_fn(preds, gts)
+                                res_dict["cw_res"][name].append(cw)
+                                res_dict["sw_res"][name].append(sw)
+                            
+                        x = x.to(device)
+                        preds = []
+                        gts = []
+                    else:
+                        x = pred.detach().clone() # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
                 else:
                     raise Exception(f"test_type {test_type} is not support for a single_step test_loader ")
                 
                 pred = model(x, case_params, mask, grid)
 
-                for name in metric_names:
-                    metric_fn = getattr(metrics, name)
-                    res_dict[name].append(metric_fn(pred, y))
-                    
+                if test_type == 'frames':
+                    for name in metric_names:
+                        metric_fn = getattr(metrics, name)
+                        cw, sw=metric_fn(pred, y)
+                        res_dict["cw_res"][name].append(cw)
+                        res_dict["sw_res"][name].append(sw)
+                else: # accumulate
+                    preds.append(pred)
+                    gts.append(y) 
                     
                 prev_case_id = case_id
             else:
@@ -214,10 +258,11 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
                     preds.append(pred)
                     x = pred
                 preds=torch.stack(preds, dim=1)
-                _batch = preds.size(0)
                 for name in metric_names:
                     metric_fn = getattr(metrics, name)
-                    res_dict[name].append(metric_fn(preds, y))
+                    cw, sw=metric_fn(preds, y)
+                    res_dict["cw_res"][name].append(cw)
+                    res_dict["sw_res"][name].append(sw)
                
             # if step % plot_interval == 0:
             #     image_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/images")
@@ -236,22 +281,28 @@ def test_loop(test_loader, model, device, training_type, output_dir, metric_name
             
     t2 = default_timer()
     Mean_inference_time = (t2-t1)/len(test_loader.dataset)
-
-    print("averge time: {0:.3f} s".format(Mean_inference_time))
-    # NMSE_List = [i.mean().item() for i in res_dict["NMSE"]]
-    # plot_loss(NMSE_List, Path(ckpt_dir) / "loss.png")
+    
+    if test_type == 'frames':
+        res_dict['Mean inference time'] = Mean_inference_time
+        print("averge time: {0:.4f} s".format(Mean_inference_time))
 
     #reshape
     for name in metric_names:
-        res_list = res_dict[name]
+        cw_res_list = res_dict["cw_res"][name]
+        sw_res_list = res_dict["sw_res"][name]
         if name == "MaxError":
-            res = torch.stack(res_list, dim=0)
-            res, _ = torch.max(res, dim=0)
+            cw_res = torch.stack(cw_res_list, dim=0)
+            cw_res, _ = torch.max(cw_res, dim=0)
+            sw_res = torch.stack(sw_res_list)
+            sw_res = torch.max(sw_res)
         else:
-            res = torch.cat(res_list, dim=0)
-            res = torch.mean(res, dim=0)
-        res_dict[name] = res
-    res_dict['Mean inference time'] = torch.tensor([Mean_inference_time])
+            cw_res = torch.cat(cw_res_list, dim=0)
+            cw_res = torch.mean(cw_res, dim=0)
+            sw_res = torch.cat(sw_res_list, dim=0)
+            sw_res = torch.mean(sw_res, dim=0)
+        res_dict["cw_res"][name] = cw_res
+        res_dict["sw_res"][name] = sw_res
+
     metrics.print_res(res_dict)
     metrics.write_res(res_dict, 
                       os.path.join(args["output_dir"],args["model_name"]+test_type + '_results.csv'),
@@ -295,6 +346,9 @@ def main(args):
 
     #model
     model = get_model(spatial_dim, n_case_params, args)
+    num_params = sum(p.numel() for p in model.parameters())
+    print(f"Model {args['model_name']} has {num_params} parameters")
+
     ##
     if not args["if_training"]:
         print(f"Test mode, load checkpoint from {saved_path} -best.pt")
@@ -305,6 +359,7 @@ def main(args):
         test_loop(test_loader, model, device, args["training_type"], output_dir, test_type='frames')
         if test_ms_data is not None:  # not darcy
             test_loop(test_ms_loader, model, device, args["training_type"], output_dir, test_type='multi_step')
+        if args["flow_name"] not in ["Darcy"]:
             test_loop(test_loader, model, device, args["training_type"], output_dir, test_type='accumulate')
         print("Done") 
         return
