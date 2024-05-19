@@ -54,7 +54,6 @@ class UNet1d(nn.Module):
     def forward(self, x, case_params, mask, grid):
         x = torch.cat((x, mask, case_params), dim=-1)
         x = x.permute(0, 2, 1)
-        residual = x[:, : self.out_channels]
 
         enc1 = self.encoder1(x)
         enc2 = self.encoder2(self.pool1(enc1))
@@ -79,7 +78,7 @@ class UNet1d(nn.Module):
         dec1 = self.pad(dec1, enc1)
         dec1 = torch.cat((dec1, enc1), dim=1)
         dec1 = self.decoder1(dec1)
-        return (self.conv(dec1) + residual).permute(0, 2, 1)
+        return (self.conv(dec1)).permute(0, 2, 1) * mask
 
     def pad(self, x1, x2): #pad x1, s.t. x1.shape = x2.shape
         diffX = x2.size()[2] - x1.size()[2]
@@ -180,7 +179,7 @@ class UNet2d(nn.Module):
         dec1 = self.pad(dec1, enc1)
         dec1 = torch.cat((dec1, enc1), dim=1)
         dec1 = self.decoder1(dec1)
-        return (self.conv(dec1)).permute(0, 2, 3, 1)
+        return (self.conv(dec1)).permute(0, 2, 3, 1) * mask
     
     def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
         info = {}
@@ -270,7 +269,6 @@ class UNet3d(nn.Module):
     def forward(self, x, case_params, mask):
         x = torch.cat((x, mask, case_params), dim=-1)
         x = x.permute(0, 4, 1, 2, 3)
-        residual = x[:, : self.out_channels]
 
         enc1 = self.encoder1(x)
         enc2 = self.encoder2(self.pool1(enc1))
@@ -295,7 +293,7 @@ class UNet3d(nn.Module):
         dec1 = self.pad(dec1, enc1)
         dec1 = torch.cat((dec1, enc1), dim=1)
         dec1 = self.decoder1(dec1)
-        return (self.conv(dec1) + residual).permute(0, 2, 3, 4, 1)
+        return (self.conv(dec1)).permute(0, 2, 3, 4, 1) * mask
 
     def pad(self, x1, x2): #pad x1, s.t. x1.shape = x2.shape
         diffZ = x2.shape()[2] - x1.shape()[2]
