@@ -4,7 +4,7 @@ import os
 import torch
 from torch.utils.data import Dataset, IterableDataset
 
-class CylinderDataset(Dataset):
+class IRCylinderDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',
@@ -37,7 +37,7 @@ class CylinderDataset(Dataset):
         Returns:
             input, label, mask, case_params, self.grid, case_id
         shape:
-            (x, y, c), (x, y, c), (x, y, 1), (x, y, p), (x, y, 2), (1)
+            (nx, c), (nx, c), (nx, 1), (nx, p), (nx, 2), (1)
         '''
         # The difference between input and output in number of frames.
         self.time_step_size = int(delta_time / data_delta_time)
@@ -58,7 +58,7 @@ class CylinderDataset(Dataset):
             keys.sort()
             idx = 0 # The index to record data corresponding to each frame
             for name in f.keys():
-                if name in case_name:
+                if name in case_name.split('_'):
                     data_group = f[name]
                     keys = list(data_group.keys())
                     keys.sort()
@@ -70,9 +70,8 @@ class CylinderDataset(Dataset):
                         data = data_group[case]
                         data_keys = list(data.keys())
                         data_keys.sort()
-
                         ###################################################################
-                        #load parameters
+                        # load parameters
                         # read some parameters to pad and create mask, Remove some 
                         # parameters that are not used in training，and prepare for normalization 
                         this_case_params = {}
@@ -81,62 +80,38 @@ class CylinderDataset(Dataset):
                                     continue
                                 this_case_params[param_name] = np.array(data[param_name], dtype=np.float32)[0]
                         
-                        # if name == 'rBC' and (this_case_params['vel_top'] > 20):
-                        #     continue
-                        
                         #############################################################
                         #load u ,v, p, grid and get mask
                         u, v, p = np.array(data['Vx'], dtype=np.float32), np.array(data['Vy'], np.float32), np.array(data['P'], np.float32)
-                        index = np.isnan(u)
-                        u[np.isnan(u)] = 0
-                        v[np.isnan(v)] = 0
-                        p[np.isnan(p)] = 0
-                        # -41.4814262390, 110.3151855469, -64.7027359009, 63.0841407776, -5329.1738281250, 2628.2126464844
-                        u = (u + 41.4814262390) / (110.3151855469 + 41.4814262390)
-                        v = (v + 64.7027359009) / (63.0841407776 + 64.7027359009)
-                        p = (p + 5329.1738281250) / (2628.2126464844 + 5329.1738281250)
-                        u = u[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
-                        v = v[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
-                        p = p[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
-                        #grid: [x, y, 2]
-                        grid = np.array(data['grid'][::reduced_resolution, ::reduced_resolution], np.float32)
-                        grid[:,:,0] = grid[:,:,0] - 1.875
-                        grid[:,:,1] = grid[:,:,1] - 3.5
+                        # -42.2113418579, 113.3804702759, -65.9885787964, 64.1017379761, -5953.8588867188, 2933.8027343750
+                        u = (u + 42.2113418579) / 155.5918121338
+                        v = (v + 65.9885787964) / 130.0903167723
+                        p = (p + 5953.8588867188) / 8887.6616210938
+                        # print(u.shape, v.shape, p.shape)
+                        u = u[::reduced_resolution].transpose(1, 0) # (T, nx)
+                        v = v[::reduced_resolution].transpose(1, 0) # (T, nx)
+                        p = p[::reduced_resolution].transpose(1, 0) # (T, nx)
+                        #grid: [nx, 2]
+                        grid = np.array(data['grid'][::reduced_resolution], np.float32)
+                        grid[:,0] = grid[:,0] - 1.875
+                        grid[:,1] = grid[:,1] - 3.5
                         self.grids.append(grid)
                         ### mask
-                        index = index[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
                         mask = np.ones_like(u)
-                        mask[~index] = 0
                         mask = torch.tensor(mask).float()
             
-                        case_features = np.stack((u, v, p), axis=-1) # (T, x, y, 3)
-                        inputs = case_features[:-self.time_step_size]  # (T, x, y, 3)
-                        outputs = case_features[self.time_step_size:]  # (T, x, y, 3)
+                        case_features = np.stack((u, v, p), axis=-1) # (T, nx, 3)
+                        inputs = case_features[:-self.time_step_size]  # (T, nx, 3)
+                        outputs = case_features[self.time_step_size:]  # (T, nx, 3)
                         assert len(inputs) == len(outputs)
 
                         num_steps = len(inputs)
                         # Loop frames, get input-output pairs
                         # Stop when converged
                         for i in range(num_steps):
-                            # inp = torch.tensor(inputs[i], dtype=torch.float32)  # (x, y, 3)
-                            # out = torch.tensor(
-                            #     outputs[i], dtype=torch.float32
-                            # )  # (x, y, 3)
-                            # # Check for convergence
-                            # inp_magn = torch.sqrt(inp[:,:,0] ** 2 + inp[:,:,1] ** 2 + inp[:,:,2] ** 2)
-                            # out_magn = torch.sqrt(out[:,:,0] ** 2 + out[:,:,1] ** 2 + out[:,:,2] ** 2)
-                            # diff = torch.abs(inp_magn - out_magn).mean()
-                            # if diff < stable_state_diff and i / num_steps > 1 / 10:
-                            #     print(
-                            #         f"Converged at {i} out of {num_steps},"
-                            #         f" {this_case_params}"
-                            #     )
-                            #     break
-                            # assert not torch.isnan(inp).any()
-                            # assert not torch.isnan(out).any()
                             if i+1 >= multi_step_size:
-                                self.inputs.append(torch.tensor(inputs[i+1-multi_step_size], dtype=torch.float32))  # (x, y, 3)
-                                self.labels.append(torch.tensor(outputs[i+1-multi_step_size:i+1], dtype=torch.float32))  # (multi_step, x, y, 3)
+                                self.inputs.append(torch.tensor(inputs[i+1-multi_step_size], dtype=torch.float32))  # (nx, 3)
+                                self.labels.append(torch.tensor(outputs[i+1-multi_step_size:i+1], dtype=torch.float32))  # (multi_step, nx, 3)
                                 self.case_ids.append(idx)
                                 #######################################################
                                 #mask
@@ -161,10 +136,10 @@ class CylinderDataset(Dataset):
                         idx += 1
 
         #Total frames = The sum of the number of frames for each case
-        self.inputs = torch.stack(self.inputs).float() #(Total frames, x, y, 3)
-        self.labels = torch.stack(self.labels).float() #(Total frames, x, y, 3)
+        self.inputs = torch.stack(self.inputs).float() #(Total frames, nx, 3)
+        self.labels = torch.stack(self.labels).float() #(Total frames, multi_step, nx, 3)
         self.case_ids = np.array(self.case_ids) #(Total frames)
-        self.masks = torch.stack(self.masks).float() #(Total frames, x, y, 1)
+        self.masks = torch.stack(self.masks).float() #(Total frames, nx, 1)
         self.grids = torch.tensor(np.stack(self.grids)).float()
 
         if self.multi_step_size==1:
@@ -175,9 +150,9 @@ class CylinderDataset(Dataset):
             #process the parameters shape
             self.case_params = torch.stack(self.case_params).float() #(cases, p)
             cases, p = self.case_params.shape
-            _, x, y, _ = self.inputs.shape
-            self.case_params = self.case_params.reshape(cases, 1, 1, p)
-            self.case_params = self.case_params.repeat(1, x, y, 1) #(cases, x, y, p)
+            _, nx, _ = self.inputs.shape
+            self.case_params = self.case_params.reshape(cases, 1, p)
+            self.case_params = self.case_params.repeat(1, nx, 1) #(cases, nx, p)
         else:
             self.case_params = torch.stack(self.case_params).float()
         
@@ -211,10 +186,10 @@ class CylinderDataset(Dataset):
         return len(self.inputs)
 
     def __getitem__(self, idx):
-        inputs = self.inputs[idx]  # (x, y, 2)
-        label = self.labels[idx]  # (x, y, 2)
-        mask = self.masks[idx] # (x, y, 1)
+        inputs = self.inputs[idx]               # (nx, 2)
+        label = self.labels[idx]                # (nx, 2)
+        mask = self.masks[idx]                  # (nx, 1)
         case_id = self.case_ids[idx]
-        case_params = self.case_params[case_id] #(x, y, p)
-        grid = self.grids[case_id] #(x, y, 2)
+        case_params = self.case_params[case_id] # (nx, p)
+        grid = self.grids[case_id]              # (nx, 2)
         return inputs, label, mask, case_params, grid, case_id

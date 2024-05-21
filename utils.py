@@ -149,6 +149,49 @@ def get_dataset(args):
                                 )
         else:
             test_ms_data = None
+    elif args["flow_name"] == "ircylinder":
+        train_data = IRCylinderDataset(
+                                filename='cylinder_train.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        val_data = IRCylinderDataset(
+                                filename='cylinder_dev.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        test_data = IRCylinderDataset(
+                                filename='cylinder_test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                )
+        if dataset_args['multi_step_size'] > 1:
+            test_ms_data = IRCylinderDataset(
+                                    filename='cylinder_test.hdf5',
+                                    saved_folder=dataset_args['saved_folder'],
+                                    case_name=dataset_args['case_name'],
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reduced_batch=dataset_args["reduced_batch"],
+                                    stable_state_diff = dataset_args['stable_state_diff'],
+                                    norm_props = dataset_args['norm_props'],
+                                    multi_step_size= dataset_args['multi_step_size']
+                                )
+        else:
+            test_ms_data = None
     elif args["flow_name"] == "NSCH":
         train_data = NSCHDataset(
                                 filename='train.hdf5',
