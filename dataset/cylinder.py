@@ -81,8 +81,8 @@ class CylinderDataset(Dataset):
                                     continue
                                 this_case_params[param_name] = np.array(data[param_name], dtype=np.float32)[0]
                         
-                        # if name == 'rBC' and (this_case_params['vel_top'] > 20):
-                        #     continue
+                        if name == 'rRE' and (this_case_params['RE'] < 15 or this_case_params['RE'] > 99999):
+                            continue
                         
                         #############################################################
                         #load u ,v, p, grid and get mask
