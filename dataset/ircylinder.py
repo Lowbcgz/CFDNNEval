@@ -8,7 +8,7 @@ class IRCylinderDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',
-                 case_name = 'irBC_irRE',
+                 case_name = 'rBC_rRE',
                  reduced_resolution = 1,
                  reduced_batch = 1,
                  data_delta_time = 0.1,
@@ -50,6 +50,24 @@ class IRCylinderDataset(Dataset):
         self.masks = []
         self.grids = []
 
+        # 22.5893936157, 25.1762752533, 0.0292317439, 9.4673204422, -189.3433685303, 596.6419677734
+        # perform normalization
+        self.statistics = {}
+        self.statistics['vel_x_mean'] = 22.5893936157
+        self.statistics['vel_x_std']  = 25.1762752533
+        self.statistics['vel_y_mean'] = 0.0292317439
+        self.statistics['vel_y_std']  = 9.4673204422
+        self.statistics['prs_mean']   = -189.3433685303
+        self.statistics['prs_std']    = 596.6419677734
+
+        self.statistics['pos_x_min'] = 1.875  # left bound
+        self.statistics['pos_x_max'] = 2.875  # right bound
+        self.statistics['pos_y_min'] = 3.5    # lower bound
+        self.statistics['pos_y_max'] = 4.5    # upper bound
+
+        self.statistics['x_len'] = self.statistics['pos_x_max'] - self.statistics['pos_x_min']
+        self.statistics['y_len'] = self.statistics['pos_y_max'] - self.statistics['pos_y_min']
+
         cnt = 0 # for reduced batch
 
         root_path = os.path.join(saved_folder, filename)
@@ -86,18 +104,17 @@ class IRCylinderDataset(Dataset):
                         #############################################################
                         #load u ,v, p, grid and get mask
                         u, v, p = np.array(data['Vx'], dtype=np.float32), np.array(data['Vy'], np.float32), np.array(data['P'], np.float32)
-                        # -42.2113418579, 113.3804702759, -65.9885787964, 64.1017379761, -5953.8588867188, 2933.8027343750
-                        u = (u + 42.2113418579) / 155.5918121338
-                        v = (v + 65.9885787964) / 130.0903167723
-                        p = (p + 5953.8588867188) / 8887.6616210938
+                        u = (u - self.statistics['vel_x_mean']) / self.statistics['vel_x_std']
+                        v = (v - self.statistics['vel_y_mean']) / self.statistics['vel_y_std']
+                        p = (p - self.statistics['prs_mean']) / self.statistics['prs_std']
                         # print(u.shape, v.shape, p.shape)
                         u = u[::reduced_resolution].transpose(1, 0) # (T, nx)
                         v = v[::reduced_resolution].transpose(1, 0) # (T, nx)
                         p = p[::reduced_resolution].transpose(1, 0) # (T, nx)
                         #grid: [nx, 2]
                         grid = np.array(data['grid'][::reduced_resolution], np.float32)
-                        grid[:,0] = grid[:,0] - 1.875
-                        grid[:,1] = grid[:,1] - 3.5
+                        grid[:,0] = grid[:,0] - self.statistics['pos_x_min']
+                        grid[:,1] = grid[:,1] - self.statistics['pos_y_min']
                         self.grids.append(grid)
                         ### mask
                         mask = np.ones_like(u)
