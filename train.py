@@ -351,7 +351,7 @@ def main(args):
 
     ##
     if not args["if_training"]:
-        print(f"Test mode, load checkpoint from {saved_path} -best.pt")
+        print(f"Test mode, load checkpoint from {saved_path}-best.pt")
         checkpoint = torch.load(saved_path + "-best.pt")
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)

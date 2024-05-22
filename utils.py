@@ -192,10 +192,16 @@ def get_dataset(args):
             test_ms_data = None
     elif args['flow_name'] == 'Darcy':
         if dataset_args["case_name"] == "PDEBench":
-            dataset_args.pop("case_name")
-            train_data = PDEDarcyDataset(split="train", **dataset_args)
-            val_data = PDEDarcyDataset(split="val", **dataset_args)
-            test_data = PDEDarcyDataset(split="test", **dataset_args)
+            train_data = PDEDarcyDataset(split="train",
+                                         saved_folder= dataset_args["saved_folder"], 
+                                         reduced_batch=dataset_args["reduced_batch"],
+                                        reduced_resolution=dataset_args["reduced_resolution"])
+            val_data = PDEDarcyDataset(split="val", saved_folder= dataset_args["saved_folder"], 
+                                         reduced_batch=dataset_args["reduced_batch"],
+                                        reduced_resolution=dataset_args["reduced_resolution"])
+            test_data = PDEDarcyDataset(split="test", saved_folder= dataset_args["saved_folder"], 
+                                         reduced_batch=dataset_args["reduced_batch"],
+                                        reduced_resolution=dataset_args["reduced_resolution"])
         else:
             train_data = DarcyDataset(
                                     filename=args['flow_name'] + '_train.hdf5',
