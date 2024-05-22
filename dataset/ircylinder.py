@@ -8,7 +8,7 @@ class IRCylinderDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',
-                 case_name = 'rBC_rRE',
+                 case_name = 'irBC_irRE',
                  reduced_resolution = 1,
                  reduced_batch = 1,
                  data_delta_time = 0.1,
