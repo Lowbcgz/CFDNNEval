@@ -50,6 +50,23 @@ class CylinderDataset(Dataset):
         self.masks = []
         self.grids = []
 
+        # perform normalization
+        self.statistics = {}
+        self.statistics['vel_x_mean'] = 26.0349330902
+        self.statistics['vel_x_std']  = 24.1961174011
+        self.statistics['vel_y_mean'] = 0.0479271673
+        self.statistics['vel_y_std']  = 5.5985617638
+        self.statistics['prs_mean']   = -55.1878814697
+        self.statistics['prs_std']    = 208.3219757080
+
+        self.statistics['pos_x_min'] = 1.875  # left bound
+        self.statistics['pos_x_max'] = 2.875  # right bound
+        self.statistics['pos_y_min'] = 3.5    # lower bound
+        self.statistics['pos_y_max'] = 4.5    # upper bound
+
+        self.statistics['x_len'] = self.statistics['pos_x_max'] - self.statistics['pos_x_min']
+        self.statistics['y_len'] = self.statistics['pos_y_max'] - self.statistics['pos_y_min']
+
         cnt = 0 # for reduced batch
 
         root_path = os.path.join(saved_folder, filename)
@@ -88,20 +105,19 @@ class CylinderDataset(Dataset):
                         #load u ,v, p, grid and get mask
                         u, v, p = np.array(data['Vx'], dtype=np.float32), np.array(data['Vy'], np.float32), np.array(data['P'], np.float32)
                         index = np.isnan(u)
+                        u = (u - self.statistics['vel_x_mean']) / self.statistics['vel_x_std']
+                        v = (v - self.statistics['vel_y_mean']) / self.statistics['vel_y_std']
+                        p = (p - self.statistics['prs_mean']) / self.statistics['prs_std']
                         u[np.isnan(u)] = 0
                         v[np.isnan(v)] = 0
                         p[np.isnan(p)] = 0
-                        # -41.4814262390, 110.3151855469, -64.7027359009, 63.0841407776, -5329.1738281250, 2628.2126464844
-                        u = (u + 41.4814262390) / (110.3151855469 + 41.4814262390)
-                        v = (v + 64.7027359009) / (63.0841407776 + 64.7027359009)
-                        p = (p + 5329.1738281250) / (2628.2126464844 + 5329.1738281250)
                         u = u[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
                         v = v[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
                         p = p[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
                         #grid: [x, y, 2]
                         grid = np.array(data['grid'][::reduced_resolution, ::reduced_resolution], np.float32)
-                        grid[:,:,0] = grid[:,:,0] - 1.875
-                        grid[:,:,1] = grid[:,:,1] - 3.5
+                        grid[:,:,0] = grid[:,:,0] - self.statistics['pos_x_min']
+                        grid[:,:,1] = grid[:,:,1] - self.statistics['pos_y_min']
                         self.grids.append(grid)
                         ### mask
                         index = index[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
@@ -116,24 +132,7 @@ class CylinderDataset(Dataset):
 
                         num_steps = len(inputs)
                         # Loop frames, get input-output pairs
-                        # Stop when converged
                         for i in range(num_steps):
-                            # inp = torch.tensor(inputs[i], dtype=torch.float32)  # (x, y, 3)
-                            # out = torch.tensor(
-                            #     outputs[i], dtype=torch.float32
-                            # )  # (x, y, 3)
-                            # # Check for convergence
-                            # inp_magn = torch.sqrt(inp[:,:,0] ** 2 + inp[:,:,1] ** 2 + inp[:,:,2] ** 2)
-                            # out_magn = torch.sqrt(out[:,:,0] ** 2 + out[:,:,1] ** 2 + out[:,:,2] ** 2)
-                            # diff = torch.abs(inp_magn - out_magn).mean()
-                            # if diff < stable_state_diff and i / num_steps > 1 / 10:
-                            #     print(
-                            #         f"Converged at {i} out of {num_steps},"
-                            #         f" {this_case_params}"
-                            #     )
-                            #     break
-                            # assert not torch.isnan(inp).any()
-                            # assert not torch.isnan(out).any()
                             if i+1 >= multi_step_size:
                                 self.inputs.append(torch.tensor(inputs[i+1-multi_step_size], dtype=torch.float32))  # (x, y, 3)
                                 self.labels.append(torch.tensor(outputs[i+1-multi_step_size:i+1], dtype=torch.float32))  # (multi_step, x, y, 3)
