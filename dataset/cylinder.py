@@ -157,13 +157,10 @@ class CylinderDataset(Dataset):
                         self.case_params.append(case_params)
                         #################################################
                         idx += 1
-                        if idx % 100 ==0: print(idx, flush=True)
 
         #Total frames = The sum of the number of frames for each case
         self.inputs = torch.stack(self.inputs).float() #(Total frames, x, y, 3)
-        print("inputs done", flush=True)
         self.labels = torch.stack(self.labels).float() #(Total frames, ms, x, y, 3)
-        print("labels done", flush = True)
         self.case_ids = np.array(self.case_ids) #(Total frames)
         self.masks = torch.stack(self.masks).float() #(Total frames, x, y, 1)
         self.grids = torch.from_numpy(np.stack(self.grids)).float()
