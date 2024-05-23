@@ -25,11 +25,11 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
         step += 1
         # batch_size = x.size(0)
         loss = 0
-        x = x.to(device) # x: input tensor (The previous time step) [b, x1, ..., xd, v]
-        y = y.to(device) # y: target tensor (The latter time step) [b, x1, ..., xd, v]
-        grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims]
-        mask = mask.to(device) # mask [b, x1, ..., xd, 1]
-        case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
+        x = x.to(device) # x: input tensor (The previous time step) [b, x1, ..., xd, v] (regular grid) or [b, Nx, v] (point clouds)
+        y = y.to(device) # y: target tensor (The latter time step) [b, x1, ..., xd, v], [b, ms, x1, ..., xd,v] (multi-step), or [b, ms, Nx, v] (point clouds)
+        grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims] or [b, Nx, dims] 
+        mask = mask.to(device) # mask [b, x1, ..., xd, 1] or (b, Nx, dims)
+        case_params = case_params.to(device) #parameters [b, x1, ..., xd, p] or [b, Nx, p]
         y = y * mask
 
         if args["training_type"] in ['autoregressive']:
@@ -37,10 +37,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
                 #Model run one_step
                 if case_params.shape[-1] == 0: #darcy
                     case_params = case_params.reshape(0)
-                # pred = model(x, case_params, mask, grid)
-                # # Loss calculation
-                # _batch = pred.size(0)
-                # loss = loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1))
+
                 loss, pred , info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
                 
                 optimizer.zero_grad()
@@ -79,13 +76,9 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
     
     res_dict = {"cw_res":{},  # channel-wise
                 "sw_res":{},}  # sample-wise
-    # input_loss_dict={}
-    # pred_loss_dict={}
     for name in metric_names:
         res_dict["cw_res"][name] = []
         res_dict["sw_res"][name] = []
-        # input_loss_dict[name] = []
-        # pred_loss_dict[name]=[]
     
     ckpt_dir = output_dir + f"/ckpt-{epoch}"
     if not os.path.exists(ckpt_dir):
@@ -113,10 +106,6 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
                     val_l2 += loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1)).item()
                     val_l_inf = max(val_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
                     
-                    # pred_loss_dict["MSE"].append(loss_fn(pred, y).cpu().detach())
-                    # pred_loss_dict["NMSE"].append((loss_fn(pred, y)/y.square().mean()).cpu().detach())
-                    # input_loss_dict["MSE"].append(loss_fn(x[...,:1], y[..., :1]).cpu().detach())
-                    # input_loss_dict["NMSE"].append((loss_fn(x[..., :1], y[..., :1])/y[..., :1].square().mean()).cpu().detach())
 
                     for name in metric_names:
                         metric_fn = getattr(metrics, name)
@@ -145,8 +134,6 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
                         cw, sw=metric_fn(preds, y)
                         res_dict["cw_res"][name].append(cw)
                         res_dict["sw_res"][name].append(sw)
-
-
 
     #reshape
     for name in metric_names:

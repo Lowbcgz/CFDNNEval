@@ -1,5 +1,5 @@
-flow_name: 'cavity'
-model_name: "LSM"
+flow_name: 'Darcy'
+model_name: "FNO"
 if_training: True
 continue_training: False
 model_path: null
@@ -13,37 +13,27 @@ training_type: "autoregressive"
 epochs: 200
 # 数据集相关参数 
 dataset:
-  single_file: True
-  saved_folder: "/data1/FluidData/cavity_reduced/"
+  saved_folder: "/data1/FluidData/darcy/"
   reduced_resolution: 1
   reduced_batch: 1
-  data_delta_time: 0.1
-  delta_time: 0.1 
-  stable_state_diff: 0.001
-  norm_props: True
-  norm_bc: True  
-  case_name: 'ReD_bc_re'
-  multi_step_size: 3
+  case_name: 'PEEBench'
 # dataloader相关参数
 dataloader:
-  train_batch_size: 64
-  val_batch_size: 16
+  train_batch_size: 128
+  val_batch_size: 128
   test_batch_size: 1
   num_workers: 4
   pin_memory: False
 # 模型相关参数
 model:
-  inputs_channel: 3
-  outputs_channel: 3
-  width: 64
-  num_token: 4
-  num_basis: 12
-  patch_size: "4,4"
-  padding: "0,0"
+  inputs_channel: 1
+  outputs_channel: 1
+  width: 32
+  modes: 12
 # 优化器相关参数
 optimizer:
   name: 'Adam'
-  lr: 5.e-4
+  lr: 1.e-3
   weight_decay: 1.e-4
 # scheduler相关参数
 scheduler:

@@ -5,6 +5,8 @@ import torch
 from torch.utils.data import Dataset, IterableDataset
 
 class CylinderDataset(Dataset):
+    min_max = [[-41.4814262390,-64.7027359009,-5329.1738281250],
+                [110.3151855469,63.0841407776,2628.2126464844]]
     def __init__(self,
                  filename,
                  saved_folder='../data/',
@@ -107,7 +109,7 @@ class CylinderDataset(Dataset):
                         index = index[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
                         mask = np.ones_like(u)
                         mask[~index] = 0
-                        mask = torch.tensor(mask).float()
+                        mask = torch.from_numpy(mask)
             
                         case_features = np.stack((u, v, p), axis=-1) # (T, x, y, 3)
                         inputs = case_features[:-self.time_step_size]  # (T, x, y, 3)
@@ -118,25 +120,9 @@ class CylinderDataset(Dataset):
                         # Loop frames, get input-output pairs
                         # Stop when converged
                         for i in range(num_steps):
-                            # inp = torch.tensor(inputs[i], dtype=torch.float32)  # (x, y, 3)
-                            # out = torch.tensor(
-                            #     outputs[i], dtype=torch.float32
-                            # )  # (x, y, 3)
-                            # # Check for convergence
-                            # inp_magn = torch.sqrt(inp[:,:,0] ** 2 + inp[:,:,1] ** 2 + inp[:,:,2] ** 2)
-                            # out_magn = torch.sqrt(out[:,:,0] ** 2 + out[:,:,1] ** 2 + out[:,:,2] ** 2)
-                            # diff = torch.abs(inp_magn - out_magn).mean()
-                            # if diff < stable_state_diff and i / num_steps > 1 / 10:
-                            #     print(
-                            #         f"Converged at {i} out of {num_steps},"
-                            #         f" {this_case_params}"
-                            #     )
-                            #     break
-                            # assert not torch.isnan(inp).any()
-                            # assert not torch.isnan(out).any()
                             if i+1 >= multi_step_size:
-                                self.inputs.append(torch.tensor(inputs[i+1-multi_step_size], dtype=torch.float32))  # (x, y, 3)
-                                self.labels.append(torch.tensor(outputs[i+1-multi_step_size:i+1], dtype=torch.float32))  # (multi_step, x, y, 3)
+                                self.inputs.append(torch.from_numpy(inputs[i+1-multi_step_size]).float())  # (x, y, 3)
+                                self.labels.append(torch.from_numpy(outputs[i+1-multi_step_size:i+1]).float())  # (multi_step, x, y, 3)
                                 self.case_ids.append(idx)
                                 #######################################################
                                 #mask
@@ -148,9 +134,6 @@ class CylinderDataset(Dataset):
                         if norm_bc:
                             self.normalize_bc(this_case_params)
                         
-                        # params_keys = [
-                        #     x for x in this_case_params.keys() if x not in ["rotated", "dx", "dy"]
-                        # ]
                         params_keys = ['RE', 'vel_top']
                         case_params_vec = []
                         for k in params_keys:
@@ -159,14 +142,17 @@ class CylinderDataset(Dataset):
                         self.case_params.append(case_params)
                         #################################################
                         idx += 1
+                        if idx % 100 ==0: print(idx, flush=True)
 
         #Total frames = The sum of the number of frames for each case
         self.inputs = torch.stack(self.inputs).float() #(Total frames, x, y, 3)
-        self.labels = torch.stack(self.labels).float() #(Total frames, x, y, 3)
+        print("inputs done", flush=True)
+        self.labels = torch.stack(self.labels).float() #(Total frames, ms, x, y, 3)
+        print("labels done", flush = True)
         self.case_ids = np.array(self.case_ids) #(Total frames)
         self.masks = torch.stack(self.masks).float() #(Total frames, x, y, 1)
-        self.grids = torch.tensor(np.stack(self.grids)).float()
-
+        self.grids = torch.from_numpy(np.stack(self.grids)).float()
+        
         if self.multi_step_size==1:
             self.labels = self.labels.squeeze(1)
             self.masks = self.masks.squeeze(1)

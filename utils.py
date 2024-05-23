@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import random
-from model import FNO2d, LSM_2d, AutoDeepONet, UNO2d, KNO2d, UNet2d
+from model import FNO2d, LSM_2d, AutoDeepONet, UNO2d, KNO2d, UNet2d, LSM_2d_ir
 from dataset import *
 import os
 import shutil
@@ -407,14 +407,26 @@ def get_model(spatial_dim, n_case_params, args):
                       modes2 = model_args['modes'],
                       n_case_params = n_case_params)
             elif model_name == "LSM":
-                model = LSM_2d(inputs_channel=model_args['inputs_channel'],
-                        outputs_channel=model_args['outputs_channel'],
-                      d_model = model_args['width'],
-                      num_token=model_args['num_token'], 
-                      num_basis=model_args['num_basis'], 
-                      patch_size=model_args['patch_size'],
-                      padding=model_args['padding'],
-                      n_case_params = n_case_params)
+                if model_args["irregular_geo"]:
+                    model = LSM_2d_ir(
+                            inputs_channel=model_args['inputs_channel'],
+                            outputs_channel=model_args['outputs_channel'],
+                            d_model = model_args['width'],
+                            num_token=model_args['num_token'],
+                            num_basis=model_args['num_basis'],
+                            patch_size=model_args['patch_size'],
+                            use_iphi = model_args['use_iphi'],
+                            n_case_params = n_case_params
+                    )
+                else: 
+                    model = LSM_2d(inputs_channel=model_args['inputs_channel'],
+                            outputs_channel=model_args['outputs_channel'],
+                        d_model = model_args['width'],
+                        num_token=model_args['num_token'], 
+                        num_basis=model_args['num_basis'], 
+                        patch_size=model_args['patch_size'],
+                        padding=model_args['padding'],
+                        n_case_params = n_case_params)
             elif model_name == 'UNO':
                 model = UNO2d(in_channels=model_args["in_channels"],
                           out_channels = model_args["out_channels"],
