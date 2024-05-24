@@ -5,8 +5,6 @@ import torch
 from torch.utils.data import Dataset, IterableDataset
 
 class CylinderDataset(Dataset):
-    min_max = [[-41.4814262390,-64.7027359009,-5329.1738281250],
-                [110.3151855469,63.0841407776,2628.2126464844]]
     def __init__(self,
                  filename,
                  saved_folder='../data/',

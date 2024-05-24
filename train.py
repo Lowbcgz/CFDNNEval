@@ -354,6 +354,7 @@ def main(args):
     if args["continue_training"]:
         checkpoint = torch.load(saved_path + "-latest.pt")
         model.load_state_dict(checkpoint["model_state_dict"])
+        print("loading latest checkpoint from ", saved_path + "-latest.pt")
     model.to(device) 
     model.train()
 
