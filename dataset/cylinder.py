@@ -122,7 +122,7 @@ class CylinderDataset(Dataset):
                         ### mask
                         index = index[::reduced_resolution, ::reduced_resolution].transpose(2, 0, 1) # (T, x, y)
                         mask = np.ones_like(u)
-                        mask[~index] = 0
+                        mask[index] = 0
                         mask = torch.from_numpy(mask)
             
                         case_features = np.stack((u, v, p), axis=-1) # (T, x, y, 3)
