@@ -167,11 +167,11 @@ class CylinderDataset(Dataset):
             self.labels = self.labels.squeeze(1)
             self.masks = self.masks.squeeze(1)
 
+        _, x, y, _ = self.inputs.shape
         if reshape_parameters:
             #process the parameters shape
             self.case_params = torch.stack(self.case_params).float() #(cases, p)
             cases, p = self.case_params.shape
-            _, x, y, _ = self.inputs.shape
             self.case_params = self.case_params.reshape(cases, 1, 1, p)
             self.case_params = self.case_params.repeat(1, x, y, 1) #(cases, x, y, p)
         else:

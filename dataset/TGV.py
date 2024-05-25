@@ -93,12 +93,13 @@ class TGVDataset(Dataset):
         self.masks = torch.ones_like(self.inputs[0,...,0:1]).float() #(x, y, 1)
         if self.multi_step_size==1:
             self.labels = self.labels.squeeze(1)
-            
+        
+        _, x, y, _ = self.inputs.shape
         #process the parameters shape
         if reshape_parameters:
             self.physic_prop = torch.from_numpy(physic_prop).float() #(Total cases, 3)
             cases, p = self.physic_prop.shape
-            _, x, y, _ = self.inputs.shape
+            
             self.physic_prop = self.physic_prop.reshape(cases, 1, 1, p)
             self.physic_prop = self.physic_prop.repeat(1, x, y, 1) #(cases, x, y, p)
         else:

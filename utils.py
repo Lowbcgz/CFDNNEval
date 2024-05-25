@@ -26,7 +26,8 @@ def get_dataset(args):
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 norm_bc = dataset_args['norm_bc'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         val_data = TubeDataset(filename=args['flow_name'] + '_dev.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
@@ -37,7 +38,8 @@ def get_dataset(args):
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 norm_bc = dataset_args['norm_bc'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         test_data = TubeDataset(filename=args['flow_name'] + '_test.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
@@ -47,7 +49,8 @@ def get_dataset(args):
                                 delta_time=dataset_args['delta_time'],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                norm_bc = dataset_args['norm_bc']
+                                norm_bc = dataset_args['norm_bc'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
             test_ms_data = TubeDataset(filename=args['flow_name'] + '_test.hdf5',
@@ -59,7 +62,8 @@ def get_dataset(args):
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 norm_bc = dataset_args['norm_bc'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         else:
             test_ms_data = None
@@ -72,7 +76,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         val_data = CavityDataset(
                                 filename=args['flow_name'] + '_dev.hdf5',
@@ -82,7 +87,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         test_data = CavityDataset(
                                 filename=args['flow_name'] + '_test.hdf5',
@@ -92,6 +98,7 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
             test_ms_data = CavityDataset(
@@ -102,7 +109,8 @@ def get_dataset(args):
                                     reduced_batch=dataset_args["reduced_batch"],
                                     stable_state_diff = dataset_args['stable_state_diff'],
                                     norm_props = dataset_args['norm_props'],
-                                    multi_step_size= dataset_args['multi_step_size']
+                                    multi_step_size= dataset_args['multi_step_size'],
+                                    reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         else:
             test_ms_data = None
@@ -115,7 +123,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         val_data = CylinderDataset(
                                 filename=args['flow_name'] + '_dev.hdf5',
@@ -125,7 +134,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         test_data = CylinderDataset(
                                 filename=args['flow_name'] + '_test.hdf5',
@@ -135,6 +145,7 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
             test_ms_data = CylinderDataset(
@@ -145,7 +156,8 @@ def get_dataset(args):
                                     reduced_batch=dataset_args["reduced_batch"],
                                     stable_state_diff = dataset_args['stable_state_diff'],
                                     norm_props = dataset_args['norm_props'],
-                                    multi_step_size= dataset_args['multi_step_size']
+                                    multi_step_size= dataset_args['multi_step_size'],
+                                    reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         else:
             test_ms_data = None
@@ -158,7 +170,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         val_data = IRCylinderDataset(
                                 filename='cylinder_dev.hdf5',
@@ -168,7 +181,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         test_data = IRCylinderDataset(
                                 filename='cylinder_test.hdf5',
@@ -178,6 +192,7 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
             test_ms_data = IRCylinderDataset(
@@ -188,7 +203,8 @@ def get_dataset(args):
                                     reduced_batch=dataset_args["reduced_batch"],
                                     stable_state_diff = dataset_args['stable_state_diff'],
                                     norm_props = dataset_args['norm_props'],
-                                    multi_step_size= dataset_args['multi_step_size']
+                                    multi_step_size= dataset_args['multi_step_size'],
+                                    reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         else:
             test_ms_data = None
@@ -201,7 +217,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         val_data = NSCHDataset(
                                 filename='val.hdf5',
@@ -211,7 +228,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         test_data = NSCHDataset(
                                 filename='test.hdf5',
@@ -221,6 +239,7 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
             test_ms_data = NSCHDataset(
@@ -231,7 +250,8 @@ def get_dataset(args):
                                     reduced_batch=dataset_args["reduced_batch"],
                                     stable_state_diff = dataset_args['stable_state_diff'],
                                     norm_props = dataset_args['norm_props'],
-                                    multi_step_size= dataset_args['multi_step_size']
+                                    multi_step_size= dataset_args['multi_step_size'],
+                                    reshape_parameters=dataset_args.get('reshape_parameters', True)
                                     )
         else:
             test_ms_data = None
@@ -244,7 +264,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         val_data = TGVDataset(
                                 filename='val.hdf5',
@@ -254,7 +275,8 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
-                                multi_step_size= dataset_args['multi_step_size']
+                                multi_step_size= dataset_args['multi_step_size'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         test_data = TGVDataset(
                                 filename='test.hdf5',
@@ -264,6 +286,7 @@ def get_dataset(args):
                                 reduced_batch=dataset_args["reduced_batch"],
                                 stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
+                                reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
             test_ms_data = TGVDataset(
@@ -274,7 +297,8 @@ def get_dataset(args):
                                     reduced_batch=dataset_args["reduced_batch"],
                                     stable_state_diff = dataset_args['stable_state_diff'],
                                     norm_props = dataset_args['norm_props'],
-                                    multi_step_size= dataset_args['multi_step_size']
+                                    multi_step_size= dataset_args['multi_step_size'],
+                                    reshape_parameters=dataset_args.get('reshape_parameters', True)
                                     )
         else:
             test_ms_data = None
@@ -283,13 +307,16 @@ def get_dataset(args):
             train_data = PDEDarcyDataset(split="train",
                                          saved_folder= dataset_args["saved_folder"], 
                                          reduced_batch=dataset_args["reduced_batch"],
-                                        reduced_resolution=dataset_args["reduced_resolution"])
+                                        reduced_resolution=dataset_args["reduced_resolution"],
+                                        reshape_parameters=dataset_args.get('reshape_parameters', True))
             val_data = PDEDarcyDataset(split="val", saved_folder= dataset_args["saved_folder"], 
                                          reduced_batch=dataset_args["reduced_batch"],
-                                        reduced_resolution=dataset_args["reduced_resolution"])
+                                        reduced_resolution=dataset_args["reduced_resolution"],
+                                        reshape_parameters=dataset_args.get('reshape_parameters', True))
             test_data = PDEDarcyDataset(split="test", saved_folder= dataset_args["saved_folder"], 
                                          reduced_batch=dataset_args["reduced_batch"],
-                                        reduced_resolution=dataset_args["reduced_resolution"])
+                                        reduced_resolution=dataset_args["reduced_resolution"],
+                                        reshape_parameters=dataset_args.get('reshape_parameters', True))
         else:
             train_data = DarcyDataset(
                                     filename=args['flow_name'] + '_train.hdf5',
@@ -371,13 +398,12 @@ def get_model(spatial_dim, n_case_params, args):
                         patch_size=model_args['patch_size'],
                         padding=model_args['padding'],
                         n_case_params = n_case_params)
-            elif model_name == "AutoDeepOnet":
+            elif model_name == "AutoDeepONet":
                 model = AutoDeepONet(
-                        branch_dim=model_args['branch_dim'],
+                        branch_dim= model_args["h"]*model_args["w"]*model_args['inputs_channel']+n_case_params,
                         trunk_dim =2, # (x,y)
-                        inputs_channel=model_args['inputs_channel'],
                         out_channel=model_args['outputs_channel'],
-                        width=model_args["deeponet_width"],
+                        width=model_args["width"],
                         trunk_depth=model_args["trunk_depth"],
                         branch_depth=model_args["branch_depth"],
                         act_name=model_args["act_fn"],
@@ -427,6 +453,28 @@ def get_model(spatial_dim, n_case_params, args):
                         patch_size=model_args['patch_size'],
                         padding=model_args['padding'],
                         n_case_params = n_case_params)
+            elif model_name == "AutoDeepONet":
+                if model_args["irregular_geo"]:
+                    model = AutoDeepONet(
+                            branch_dim= model_args["num_points"]*model_args['inputs_channel']+n_case_params,
+                            trunk_dim =2, # (x,y)
+                            out_channel=model_args['outputs_channel'],
+                            width=model_args["width"],
+                            trunk_depth=model_args["trunk_depth"],
+                            branch_depth=model_args["branch_depth"],
+                            act_name=model_args["act_fn"],
+                            irregular_geometry=True
+                            )
+                else:
+                    model = AutoDeepONet(
+                            branch_dim= model_args["h"]*model_args["w"]*model_args['inputs_channel']+n_case_params,
+                            trunk_dim =2, # (x,y)
+                            out_channel=model_args['outputs_channel'],
+                            width=model_args["width"],
+                            trunk_depth=model_args["trunk_depth"],
+                            branch_depth=model_args["branch_depth"],
+                            act_name=model_args["act_fn"],
+                            )
             elif model_name == 'UNO':
                 model = UNO2d(in_channels=model_args["in_channels"],
                           out_channels = model_args["out_channels"],

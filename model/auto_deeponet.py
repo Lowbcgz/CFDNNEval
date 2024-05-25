@@ -38,6 +38,7 @@ class AutoDeepONet(nn.Module):
         act_name="relu",
         act_norm: bool = False,
         act_on_output: bool = False,
+        irregular_geometry: bool = False,
     ):
         """
         Args:
@@ -54,6 +55,7 @@ class AutoDeepONet(nn.Module):
         self.act_name = act_name
         self.act_norm = act_norm
         self.act_on_output = act_on_output
+        self.irregular_geometry = irregular_geometry
         # self.num_label_samples = num_label_samples
 
         act_fn = get_act_fn(act_name, act_norm)
@@ -72,21 +74,20 @@ class AutoDeepONet(nn.Module):
         inputs: Tensor,
         case_params: Tensor,
         mask: Optional[Tensor] = None,
-        query_idxs: Optional[Tensor] = None,
+        query_point: Optional[Tensor] = None,
     ):
         """
 
         ### Args
-        - inputs: (b, c, h, w)
+        - inputs: (b, h, w, c) for grid or (b, nx, c) for points cloud 
         - case_params: (b, p)
-        - labels: (b, c, h, w)
         - query_point: (k, 2), k is the number of query points, each is
             an (x, y) coordinate.
-        - masks: For future use. Actually did not used in here. 
+        - mask: (b, h, w, 1) for grid or (b, nx, 1) for points cloud 
 
         ### Returns
             Output: Tensor, if query_points is not None, the shape is (b, k).
-                Else, the shape is (b, c, h, w).
+                Else, the shape is (b, h, w, c).
 
         Notations:
         - b: batch size
@@ -96,32 +97,38 @@ class AutoDeepONet(nn.Module):
         - p: number of case parameters
         - k: number of query points
         """
-        batch_size, height, width, in_channel = inputs.shape
+        if not self.irregular_geometry:
+            batch_size, height, width, in_channel = inputs.shape
+            # use full grid as query points
+            query_idxs = torch.tensor(
+                list(product(range(height), range(width))),
+                dtype=torch.long,
+                device=inputs.device,
+            )  # (h * w, 2)
+            query_point = (query_idxs.float() - 50) / 100  # (k, 2)
+        else:
+            batch_size, _, in_channel = inputs.shape
+            query_point = query_point[0] # (b, k, 2) -> (k, 2)
         
+        inputs = inputs * mask
         # Flatten
-        flat_inputs = inputs.view(batch_size, -1)  # (B, h * w * c)
+        flat_inputs = inputs.view(batch_size, -1)  # (b, h * w * c)
 
         # Simple prepend physical properties to the input field.
         flat_inputs = torch.cat([flat_inputs, case_params], dim=1)
         x_branch = self.branch_net(flat_inputs)
 
-
-        # use full grid as query points
-        query_idxs = torch.tensor(
-            list(product(range(height), range(width))),
-            dtype=torch.long,
-            device=flat_inputs.device,
-        )  # (h * w, 2)
-        n_query = query_idxs.shape[0]
+        n_query = query_point.shape[0]
         # Input to the trunk net
-        x_trunk = (query_idxs.float() - 50) / 100  # (k, 2)
-        x_trunk = self.trunk_net(x_trunk)  # (k, p)
+        x_trunk = self.trunk_net(query_point)  # (k, p)
         x_branch=x_branch.reshape([batch_size,1,self.out_channel,-1]) #(b, 1 ,c, p)
         x_trunk=x_trunk.reshape([1,n_query,self.out_channel,-1]) # (1, k, c, p)
         residuals = torch.sum(x_branch * x_trunk, dim=-1) + self.bias  # (b, k, c)
         preds = inputs.view(batch_size, -1,self.out_channel) # (b, k, c)
-        preds += residuals
-        preds = preds.view(-1, height, width, self.out_channel)  # (b, h, w, c)
+        preds = preds + residuals
+        if not self.irregular_geometry: # recover to shape of grid
+            preds = preds.view(-1, height, width, self.out_channel)  # (b, h, w, c)
+        preds = preds* mask
         return preds
     
     def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):

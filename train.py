@@ -8,6 +8,7 @@ import yaml
 import argparse
 import metrics
 from timeit import default_timer
+from functools import reduce
 from utils import setup_seed, get_model, get_dataset, get_dataloader
 from visualize import *
 from dataset import *
@@ -330,6 +331,7 @@ def main(args):
     print("output tensor shape: ", output.shape[1:] if val_loader.dataset.multi_step_size==1 else output.shape[2:])
     spatial_dim = grid.shape[-1]
     n_case_params = case_params.shape[-1]
+    args["model"]["num_points"] = reduce(lambda x,y: x*y, grid.shape[1:-1])  # get num_points, especially of irregular geometry(point clouds)
 
     #model
     model = get_model(spatial_dim, n_case_params, args)
