@@ -481,6 +481,8 @@ def get_model(spatial_dim, n_case_params, args):
                           width=model_args["width"],
                           n_case_params = n_case_params)
             elif model_name == 'KNO':
+                model_args_copy = model_args.copy()
+                model_args_copy.pop('num_points')
                 model = KNO2d(n_case_params=n_case_params, **model_args)
             elif model_name == 'UNet':
                 model = UNet2d(in_channels=model_args['in_channels'],
