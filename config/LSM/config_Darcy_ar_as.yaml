@@ -27,6 +27,7 @@ dataloader:
   pin_memory: False
 # 模型相关参数
 model:
+  irregular_geo: False
   inputs_channel: 1
   outputs_channel: 3
   width: 32

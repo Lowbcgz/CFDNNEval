@@ -8,6 +8,7 @@ import yaml
 import argparse
 import metrics
 from timeit import default_timer
+from functools import reduce
 from utils import setup_seed, get_model, get_dataset, get_dataloader, get_min_max
 from visualize import *
 from dataset import *
@@ -344,6 +345,7 @@ def main(args):
     print("output tensor shape: ", output.shape[1:] if val_loader.dataset.multi_step_size==1 else output.shape[2:])
     spatial_dim = grid.shape[-1]
     n_case_params = case_params.shape[-1]
+    args["model"]["num_points"] = reduce(lambda x,y: x*y, grid.shape[1:-1])  # get num_points, especially of irregular geometry(point clouds)
 
     # get min_max per channel of train-set on the fly for normalization.
     channel_min, channel_max = get_min_max(train_loader)
