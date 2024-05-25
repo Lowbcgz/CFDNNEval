@@ -50,7 +50,6 @@ class IRCylinderDataset(Dataset):
         self.masks = []
         self.grids = []
 
-        # 22.5893936157, 25.1762752533, 0.0292317439, 9.4673204422, -189.3433685303, 596.6419677734
         # perform normalization
         self.statistics = {}
         self.statistics['vel_x_mean'] = 22.5893936157
@@ -104,9 +103,7 @@ class IRCylinderDataset(Dataset):
                         #############################################################
                         #load u ,v, p, grid and get mask
                         u, v, p = np.array(data['Vx'], dtype=np.float32), np.array(data['Vy'], np.float32), np.array(data['P'], np.float32)
-                        u = (u - self.statistics['vel_x_mean']) / self.statistics['vel_x_std']
-                        v = (v - self.statistics['vel_y_mean']) / self.statistics['vel_y_std']
-                        p = (p - self.statistics['prs_mean']) / self.statistics['prs_std']
+
                         # print(u.shape, v.shape, p.shape)
                         u = u[::reduced_resolution].transpose(1, 0) # (T, nx)
                         v = v[::reduced_resolution].transpose(1, 0) # (T, nx)

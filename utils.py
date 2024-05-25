@@ -444,6 +444,20 @@ def get_model(spatial_dim, n_case_params, args):
             pass
     return model
 
+def get_min_max(dataloader):
+    for i, batch in enumerate(dataloader):
+        x = batch[0] # inputs [bs, h, w, c] or [bs, nx, c]
+        c = x.shape[-1]
+        if i == 0:  # initialize
+            channel_min, _ = x.view(-1, c).min(dim=0)
+            channel_max, _ = x.view(-1, c).max(dim=0)
+        else:
+            batch_max_value, _ = x.view(-1,c).max(dim=0)
+            batch_min_value, _ = x.view(-1,c).min(dim=0)
+            channel_min = torch.minimum(channel_min, batch_min_value)
+            channel_max = torch.maximum(channel_max, batch_max_value)
+    return channel_min, channel_max
+
 
 def save_checkpoint(state, save_path: str, is_best: bool = False, max_keep: int = None):
     """Saves torch model to checkpoint file.

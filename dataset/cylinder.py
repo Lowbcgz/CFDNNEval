@@ -105,9 +105,7 @@ class CylinderDataset(Dataset):
                         #load u ,v, p, grid and get mask
                         u, v, p = np.array(data['Vx'], dtype=np.float32), np.array(data['Vy'], np.float32), np.array(data['P'], np.float32)
                         index = np.isnan(u)
-                        u = (u - self.statistics['vel_x_mean']) / self.statistics['vel_x_std']
-                        v = (v - self.statistics['vel_y_mean']) / self.statistics['vel_y_std']
-                        p = (p - self.statistics['prs_mean']) / self.statistics['prs_std']
+                        
                         u[np.isnan(u)] = 0
                         v[np.isnan(v)] = 0
                         p[np.isnan(p)] = 0
