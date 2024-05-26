@@ -244,7 +244,7 @@ class UNet3d(nn.Module):
         super(UNet3d, self).__init__()
 
         features = init_features
-        self.encoder1 = UNet3d._block(in_channels, features, name="enc1")
+        self.encoder1 = UNet3d._block(in_channels + 1 + n_case_params, features, name="enc1")
         self.pool1 = nn.MaxPool3d(kernel_size=2, stride=2)
         self.encoder2 = UNet3d._block(features, features * 2, name="enc2")
         self.pool2 = nn.MaxPool3d(kernel_size=2, stride=2)
@@ -266,7 +266,7 @@ class UNet3d(nn.Module):
 
         self.conv = nn.Conv3d(in_channels=features, out_channels=out_channels, kernel_size=1)
 
-    def forward(self, x, case_params, mask):
+    def forward(self, x, case_params, mask, grid):
         x = torch.cat((x, mask, case_params), dim=-1)
         x = x.permute(0, 4, 1, 2, 3)
 
