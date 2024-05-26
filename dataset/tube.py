@@ -104,6 +104,9 @@ class TubeDataset(Dataset):
                         # # Pad the top and bottom
                         u = np.pad(u, ((0, 0), (1, 1), (0, 0)), mode="constant", constant_values=0)
                         v = np.pad(v, ((0, 0), (1, 1), (0, 0)), mode="constant", constant_values=0)
+                        #Dimensionless normalization
+                        u = u / this_case_params['vel_in']
+                        v = v / this_case_params['vel_in']
             
                         case_features = np.stack((u, v), axis=-1) # (T, x, y, 2)
                         inputs = case_features[:-self.time_step_size, :]  # (T, x, y, 2)
@@ -187,10 +190,10 @@ class TubeDataset(Dataset):
         """
         Normalize the physics properties in-place.
         """
-        density_mean = 5
-        density_std = 4
-        viscosity_mean = 0.00238
-        viscosity_std = 0.005
+        density_mean = 45.43571472167969
+        density_std = 47.47755432128906
+        viscosity_mean = 0.32749998569488525
+        viscosity_std = 0.31651002168655396
         case_params["density"] = (
             case_params["density"] - density_mean
         ) / density_std
@@ -198,11 +201,11 @@ class TubeDataset(Dataset):
             case_params["viscosity"] - viscosity_mean
         ) / viscosity_std
 
-    def normalize_bc(self, case_params, key):
+    def normalize_bc(self, case_params):
         """
         Normalize the boundary conditions in-place.
         """
-        case_params[key] = case_params[key] / 50 - 0.5
+        case_params['vel_in'] = (case_params['vel_in'] - 1.4371428489685059) / 1.0663825273513794
     
     def __len__(self):
         return len(self.inputs)
