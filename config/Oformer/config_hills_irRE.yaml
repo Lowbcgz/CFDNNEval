@@ -1,5 +1,5 @@
-flow_name: 'cylinder'
-model_name: "FNO"
+flow_name: 'irhills'
+model_name: "OFormer"
 if_training: True
 continue_training: False
 model_path: null
@@ -14,26 +14,28 @@ epochs: 200
 # 数据集相关参数 
 dataset:
   single_file: True
-  saved_folder: "/data1/FluidData/cylinder_reduced/"
+  saved_folder: "/data1/FluidData/periodic_hills/"
   reduced_resolution: 1
   reduced_batch: 1
-  stable_state_diff: 0.0001
+  data_delta_time: 0.1
+  delta_time: 0.1 
+  stable_state_diff: 0.001
   norm_props: True
-  case_name: 'rRE_rBC'
+  norm_bc: True  
+  case_name: 'irRE'
   multi_step_size: 3
 # dataloader相关参数
 dataloader:
-  train_batch_size: 128
-  val_batch_size: 128
+  train_batch_size: 8
+  val_batch_size: 8
   test_batch_size: 1
   num_workers: 4
   pin_memory: False
 # 模型相关参数
 model:
-  inputs_channel: 3
-  outputs_channel: 3
+  in_channels: 3
+  out_channels: 3
   width: 32
-  modes: 12
 # 优化器相关参数
 optimizer:
   name: 'Adam'
