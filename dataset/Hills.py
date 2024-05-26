@@ -119,18 +119,18 @@ class HillsDataset(Dataset):
                         v[np.isnan(v)] = 0
                         w[np.isnan(w)] = 0
                         p[np.isnan(p)] = 0
-                        u = u[::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
-                        v = v[::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
-                        w = w[::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
-                        p = p[::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
+                        u = u[::reduced_resolution, ::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
+                        v = v[::reduced_resolution, ::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
+                        w = w[::reduced_resolution, ::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
+                        p = p[::reduced_resolution, ::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
                         #grid: [x, y, 3]
-                        grid = np.array(data['grid'][::reduced_resolution, ::reduced_resolution], np.float32)
+                        grid = np.array(data['grid'][::reduced_resolution, ::reduced_resolution, ::reduced_resolution], np.float32)
                         grid[:,:,0] = grid[:,:,0] / self.statistics['x_len']
                         grid[:,:,1] = grid[:,:,1] / self.statistics['y_len']
                         grid[:,:,2] = grid[:,:,2] / self.statistics['z_len']
                         self.grids.append(grid)
                         ### mask
-                        index = index[::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
+                        index = index[::reduced_resolution, ::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
                         mask = np.ones_like(u)
                         mask[index] = 0
                         mask = torch.tensor(mask).float()
@@ -215,5 +215,5 @@ class HillsDataset(Dataset):
         case_id = self.case_ids[idx] # (1)
         case_params = self.case_params[case_id] # (x, y, z, p)
         grid = self.grids[case_id] #(x, y, z, 3)
-        print(inputs.shape, label.shape, mask.shape, case_params.shape, grid.shape, case_id)
+        # print(inputs.shape, label.shape, mask.shape, case_params.shape, grid.shape, case_id)
         return inputs, label, mask, case_params, grid, case_id
