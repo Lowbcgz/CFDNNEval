@@ -5,3 +5,5 @@ from .tube import TubeDataset
 from .TGV import TGVDataset
 from .cylinder import CylinderDataset
 from .ircylinder import IRCylinderDataset
+from .Hills import HillsDataset
+from .irHills import IRHillsDataset

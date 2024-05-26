@@ -340,6 +340,92 @@ def get_dataset(args):
                                     reduced_batch=dataset_args["reduced_batch"],
                                     )
         test_ms_data = None
+    elif args["flow_name"] == "hills":
+        train_data = HillsDataset(
+                                filename=args['flow_name'] + '_train.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        val_data = HillsDataset(
+                                filename=args['flow_name'] + '_dev.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        test_data = HillsDataset(
+                                filename=args['flow_name'] + '_test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                )
+        if dataset_args['multi_step_size'] > 1:
+            test_ms_data = HillsDataset(
+                                    filename=args['flow_name'] + '_test.hdf5',
+                                    saved_folder=dataset_args['saved_folder'],
+                                    case_name=dataset_args['case_name'],
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reduced_batch=dataset_args["reduced_batch"],
+                                    stable_state_diff = dataset_args['stable_state_diff'],
+                                    norm_props = dataset_args['norm_props'],
+                                    multi_step_size= dataset_args['multi_step_size']
+                                )
+        else:
+            test_ms_data = None
+    elif args["flow_name"] == "irhills":
+        train_data = IRHillsDataset(
+                                filename=args['flow_name'][2:] + '_train.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        val_data = IRHillsDataset(
+                                filename=args['flow_name'][2:] + '_dev.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                multi_step_size= dataset_args['multi_step_size']
+                                )
+        test_data = IRHillsDataset(
+                                filename=args['flow_name'][2:] + '_test.hdf5',
+                                saved_folder=dataset_args['saved_folder'],
+                                case_name=dataset_args['case_name'],
+                                reduced_resolution=dataset_args["reduced_resolution"],
+                                reduced_batch=dataset_args["reduced_batch"],
+                                stable_state_diff = dataset_args['stable_state_diff'],
+                                norm_props = dataset_args['norm_props'],
+                                )
+        if dataset_args['multi_step_size'] > 1:
+            test_ms_data = IRHillsDataset(
+                                    filename=args['flow_name'][2:] + '_test.hdf5',
+                                    saved_folder=dataset_args['saved_folder'],
+                                    case_name=dataset_args['case_name'],
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reduced_batch=dataset_args["reduced_batch"],
+                                    stable_state_diff = dataset_args['stable_state_diff'],
+                                    norm_props = dataset_args['norm_props'],
+                                    multi_step_size= dataset_args['multi_step_size']
+                                )
+        else:
+            test_ms_data = None
     else:
         raise ValueError("Invalid flow name.")
     print("#Train data: ", len(train_data))
