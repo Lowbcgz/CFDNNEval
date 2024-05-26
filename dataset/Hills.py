@@ -133,7 +133,7 @@ class HillsDataset(Dataset):
                         index = index[::reduced_resolution, ::reduced_resolution, ::reduced_resolution].transpose(3, 0, 1, 2) # (T, x, y, z)
                         mask = np.ones_like(u)
                         mask[index] = 0
-                        mask = torch.tensor(mask).float()
+                        mask = torch.from_numpy(mask).float()
             
                         case_features = np.stack((u, v, w, p), axis=-1) # (T, x, y, z, 4)
                         inputs = case_features[:-self.time_step_size]  # (T, x, y, z, 4)
@@ -144,8 +144,8 @@ class HillsDataset(Dataset):
                         # Loop frames, get input-output pairs
                         for i in range(num_steps):
                             if i+1 >= multi_step_size:
-                                self.inputs.append(torch.tensor(inputs[i+1-multi_step_size], dtype=torch.float32))  # (x, y, z, 3)
-                                self.labels.append(torch.tensor(outputs[i+1-multi_step_size:i+1], dtype=torch.float32))  # (multi_step, x, y, z, 3)
+                                self.inputs.append(torch.from_numpy(inputs[i+1-multi_step_size]).float())  # (x, y, z, 3)
+                                self.labels.append(torch.from_numpy(outputs[i+1-multi_step_size:i+1]).float())  # (multi_step, x, y, z, 3)
                                 self.case_ids.append(idx)
                                 #######################################################
                                 #mask
@@ -169,17 +169,18 @@ class HillsDataset(Dataset):
         self.labels = torch.stack(self.labels).float() #(Total frames, multi_step, x, y, z, 4)
         self.case_ids = np.array(self.case_ids) #(Total frames)
         self.masks = torch.stack(self.masks).float() #(Total frames, x, y, z, 1)
-        self.grids = torch.tensor(np.stack(self.grids)).float()
+        self.grids = torch.from_numpy(np.stack(self.grids)).float()
 
         if self.multi_step_size==1:
             self.labels = self.labels.squeeze(1)
             self.masks = self.masks.squeeze(1)
 
+        _, x, y, z, _ = self.inputs.shape
         if reshape_parameters:
             #process the parameters shape
             self.case_params = torch.stack(self.case_params).float() #(cases, p)
             cases, p = self.case_params.shape
-            _, x, y, z, _ = self.inputs.shape
+            
             self.case_params = self.case_params.reshape(cases, 1, 1, 1, p)
             self.case_params = self.case_params.repeat(1, x, y, z, 1) #(cases, x, y, z, p)
         else:

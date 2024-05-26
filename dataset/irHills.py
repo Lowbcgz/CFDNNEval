@@ -50,7 +50,6 @@ class IRHillsDataset(Dataset):
         self.masks = []
         self.grids = []
 
-        # -28.0815334320 66.4669570923 -32.2173538208 31.7274246216 -12.8192892075 26.2205390930 -313.4261779785 862.0435180664
         # perform normalization
         self.statistics = {}
         self.statistics['vel_x_min'] = -28.0815334320
@@ -126,7 +125,7 @@ class IRHillsDataset(Dataset):
                         self.grids.append(grid)
                         ### mask
                         mask = np.ones_like(u)
-                        mask = torch.tensor(mask).float()
+                        mask = torch.from_numpy(mask).float()
             
                         case_features = np.stack((u, v, w, p), axis=-1) # (T, nx, 4)
                         inputs = case_features[:-self.time_step_size]  # (T, nx, 4)
@@ -138,8 +137,8 @@ class IRHillsDataset(Dataset):
                         # Stop when converged
                         for i in range(num_steps):
                             if i+1 >= multi_step_size:
-                                self.inputs.append(torch.tensor(inputs[i+1-multi_step_size], dtype=torch.float32))  # (nx, 4)
-                                self.labels.append(torch.tensor(outputs[i+1-multi_step_size:i+1], dtype=torch.float32))  # (multi_step, nx, 4)
+                                self.inputs.append(torch.from_numpy(inputs[i+1-multi_step_size]).float())  # (nx, 4)
+                                self.labels.append(torch.from_numpy(outputs[i+1-multi_step_size:i+1]).float())  # (multi_step, nx, 4)
                                 self.case_ids.append(idx)
                                 #######################################################
                                 #mask
@@ -163,7 +162,7 @@ class IRHillsDataset(Dataset):
         self.labels = torch.stack(self.labels).float() #(Total frames, multi_step, nx, 4)
         self.case_ids = np.array(self.case_ids) #(Total frames)
         self.masks = torch.stack(self.masks).float() #(Total frames, nx, 1)
-        self.grids = torch.tensor(np.stack(self.grids)).float()
+        self.grids = torch.from_numpy(np.stack(self.grids)).float()
 
         if self.multi_step_size==1:
             self.labels = self.labels.squeeze(1)
