@@ -146,7 +146,7 @@ class TubeDataset(Dataset):
                         if norm_props:
                             self.normalize_physics_props(this_case_params)
                         if norm_bc:
-                            self.normalize_bc(this_case_params, "vel_in")
+                            self.normalize_bc(this_case_params)
                                
                         keys = [
                             x for x in this_case_params.keys() if x not in ["rotated", "dx", "dy"]
