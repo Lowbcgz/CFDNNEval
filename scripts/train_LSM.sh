@@ -37,6 +37,9 @@ CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_Darcy_PDEBench.yaml -
 # cylinder / ircylinder
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_ircylinder_irRE_irBC.yaml -c irRE | tee ./log/train/LSM_ircylinder_irRE.out
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_ircylinder_irRE_irBC.yaml -c irBC | tee ./log/train/LSM_ircylinder_irBC.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cylinder_rRE_rBC.yaml -c rRE_rBC | tee ./log/train/LSM_cylinder_rRE_rBC.out
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cylinder_rRE_rBC.yaml -c rRE | tee ./log/train/LSM_cylinder_rRE.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cylinder_rRE_rBC.yaml -c rRE_rBC | tee ./log/train/LSM_cylinder_rRE_rBC.out
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cylinder_rRE_rBC.yaml -c rBC | tee ./log/train/LSM_cylinder_rBC.out
+
+# periodic hills
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_hills_rRE.yaml -c rRE | tee ./log/train/LSM_hills_rRE.out

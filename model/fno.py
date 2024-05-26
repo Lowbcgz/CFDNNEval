@@ -174,7 +174,7 @@ class SpectralConv2d_fast(nn.Module):
         return x
 
 class FNO2d(nn.Module):
-    def __init__(self, inputs_channel, outputs_channel=None, modes1=12, modes2=12, width=20, pad = None, initial_step=1, n_case_params = 5):
+    def __init__(self, inputs_channel, outputs_channel=None, modes1=12, modes2=12, width=20, pad = 2, initial_step=1, n_case_params = 5):
         super(FNO2d, self).__init__()
 
         """
@@ -309,7 +309,7 @@ class SpectralConv3d(nn.Module):
         return x
 
 class FNO3d(nn.Module):
-    def __init__(self, num_channels, modes1=8, modes2=8, modes3=8, width=20, initial_step=10):
+    def __init__(self,  inputs_channel, outputs_channel=None, modes1=8, modes2=8, modes3=8, width=20, initial_step=1, n_case_params = 5):
         super(FNO3d, self).__init__()
 
         """
@@ -329,9 +329,12 @@ class FNO3d(nn.Module):
         self.modes2 = modes2
         self.modes3 = modes3
         self.width = width
-        self.padding = 6 # pad the domain if input is non-periodic
-        self.fc0 = nn.Linear(initial_step*num_channels+3, self.width)
-        # input channel is 12: the solution of the first 10 timesteps + 3 locations (u(1, x, y), ..., u(10, x, y),  x, y, t)
+        self.padding = 2 # pad the domain if input is non-periodic
+        # self.fc0 = nn.Linear(initial_step*num_channels+3, self.width)
+        if outputs_channel is None:
+            outputs_channel = inputs_channel
+        self.fc0 = nn.Linear(inputs_channel * initial_step  + 1 + 3 + n_case_params, self.width)
+        # +1 for mask, +3 for grid
 
         self.conv0 = SpectralConv3d(self.width, self.width, self.modes1, self.modes2, self.modes3)
         self.conv1 = SpectralConv3d(self.width, self.width, self.modes1, self.modes2, self.modes3)
@@ -341,21 +344,17 @@ class FNO3d(nn.Module):
         self.w1 = nn.Conv3d(self.width, self.width, 1)
         self.w2 = nn.Conv3d(self.width, self.width, 1)
         self.w3 = nn.Conv3d(self.width, self.width, 1)
-        self.bn0 = torch.nn.BatchNorm3d(self.width)
-        self.bn1 = torch.nn.BatchNorm3d(self.width)
-        self.bn2 = torch.nn.BatchNorm3d(self.width)
-        self.bn3 = torch.nn.BatchNorm3d(self.width)
 
         self.fc1 = nn.Linear(self.width, 128)
-        self.fc2 = nn.Linear(128, num_channels)
+        self.fc2 = nn.Linear(128, outputs_channel)
 
-    def forward(self, x, grid):
-        # x dim = [b, x1, x2, x3, t*v]
-        x = torch.cat((x, grid), dim=-1)
+    def forward(self,  x, case_params, mask, grid):
+        # x dim = [b, x1, x2, x3, v]
+        x = torch.cat((x, mask, grid, case_params), dim=-1)
         x = self.fc0(x)
         x = x.permute(0, 4, 1, 2, 3)
         
-        x = F.pad(x, [0, self.padding]) # pad the domain if input is non-periodic
+        x = F.pad(x, [0, self.padding, 0, self.padding, 0, self.padding]) # pad the domain if input is non-periodic
 
         x1 = self.conv0(x)
         x2 = self.w0(x)
@@ -376,10 +375,22 @@ class FNO3d(nn.Module):
         x2 = self.w3(x)
         x = x1 + x2
 
-        x = x[..., :-self.padding]
-        x = x.permute(0, 2, 3, 4, 1) # pad the domain if input is non-periodic
+        x = x[..., :-self.padding, :-self.padding, :-self.padding]
+        x = x.permute(0, 2, 3, 4, 1)
         x = self.fc1(x)
         x = F.gelu(x)
         x = self.fc2(x)
-        return x.unsqueeze(-2)
+        x = x* mask
+        return x
     
+    def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
+        info = {}
+        pred = self(x, case_params, mask, grid)
+        
+        if loss_fn is not None:
+            ## defined your specific loss calculations here
+            loss = loss_fn(pred, y)
+            return loss, pred, info
+        else:
+            #TODO: default loss_fn
+            pass

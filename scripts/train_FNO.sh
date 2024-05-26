@@ -31,10 +31,12 @@ CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c ca_m
 CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c phi_pre_uv0 | tee ./log/train/FNO_nsch_phi_pre_uv0.out
 
 # Darcy
-
 CUDA_VISIBLE_DEVICES=7 python train.py ./config/FNO/config_Darcy_PDEBench.yaml -c PDEBench | tee ./log/train/FNO_darcy_PDEBench.out
 
 # cylinder
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/FNO/config_cylinder_rRE_rBC.yaml -c rRE_rBC | tee ./log/train/FNO_cylinder_rRE_rBC.out
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/FNO/config_cylinder_rRE_rBC.yaml -c rRE | tee ./log/train/FNO_cylinder_rRE.out
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/FNO/config_cylinder_rRE_rBC.yaml -c rBC | tee ./log/train/FNO_cylinder_rBC.out
+
+# periodic hills
+CUDA_VISIBLE_DEVICES=3 python train.py ./config/FNO/config_hills_rRE.yaml -c rRE | tee ./log/train/FNO_hills_rRE.out
