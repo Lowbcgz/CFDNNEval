@@ -36,8 +36,9 @@ model:
   out_channels: 4
   autoencoder: 'Conv'
   width: 32
-  modes_x: 16
-  modes_y: 16
+  modes_x: 8
+  modes_y: 8
+  modes_z: 8
   decompose: 8
 # 优化器相关参数
 optimizer:
