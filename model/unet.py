@@ -295,6 +295,18 @@ class UNet3d(nn.Module):
         dec1 = self.decoder1(dec1)
         return (self.conv(dec1)).permute(0, 2, 3, 4, 1) * mask
 
+    def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
+        info = {}
+        pred = self(x, case_params, mask, grid)
+        
+        if loss_fn is not None:
+            ## defined your specific loss calculations here
+            loss = loss_fn(pred, y)
+            return loss, pred, info
+        else:
+            #TODO: default loss_fn
+            pass
+        
     def pad(self, x1, x2): #pad x1, s.t. x1.shape = x2.shape
         diffZ = x2.shape()[2] - x1.shape()[2]
         diffY = x2.size()[3] - x1.size()[3]

@@ -326,7 +326,7 @@ class KNO3d(nn.Module):
             x = torch.tanh(self.norm_layer(self.w0(x_w)) + x)
         else:
             x = torch.tanh(self.w0(x_w) + x)
-        x = x.permute(0, 2, 3, 1)
+        x = x.permute(0, 2, 3, 4, 1)
         x = self.dec(x) # Decoder
         x = x * mask
         return x
