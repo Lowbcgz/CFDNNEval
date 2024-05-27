@@ -164,19 +164,19 @@ class UNO3d(nn.Module):
 
         self.fc0 = nn.Linear(self.width//2, self.width) # input channel is 3: (a(x, y), x, y)
 
-        self.L0 = OperatorBlock_3D(self.width, 2*factor*self.width,32, 32, 32, 14, 14, 14)
+        self.L0 = OperatorBlock_3D(self.width, 2*factor*self.width,32, 32, 32, 8, 8, 8)
 
-        self.L1 = OperatorBlock_3D(2*factor*self.width, 4*factor*self.width, 16, 16, 16, 6,6,6)
+        self.L1 = OperatorBlock_3D(2*factor*self.width, 4*factor*self.width, 16, 16, 16, 4,4,4)
 
-        self.L2 = OperatorBlock_3D(4*factor*self.width, 8*factor*self.width, 8, 8, 8,3,3,3)
+        self.L2 = OperatorBlock_3D(4*factor*self.width, 8*factor*self.width, 8, 8, 8,2,2,2)
         
-        self.L3 = OperatorBlock_3D(8*factor*self.width, 8*factor*self.width, 8, 8,8,3,3,3)
+        self.L3 = OperatorBlock_3D(8*factor*self.width, 8*factor*self.width, 8, 8,8,2,2,2)
         
-        self.L4 = OperatorBlock_3D(8*factor*self.width, 4*factor*self.width, 16, 16, 16,3,3,3)
+        self.L4 = OperatorBlock_3D(8*factor*self.width, 4*factor*self.width, 16, 16, 16,2,2,2)
 
-        self.L5 = OperatorBlock_3D(8*factor*self.width, 2*factor*self.width, 32, 32,32,6,6,6)
+        self.L5 = OperatorBlock_3D(8*factor*self.width, 2*factor*self.width, 32, 32,32,4,4,4)
 
-        self.L6 = OperatorBlock_3D(4*factor*self.width, self.width, 64, 64,64,14,14,14) # will be reshaped
+        self.L6 = OperatorBlock_3D(4*factor*self.width, self.width, 64, 64,64,8,8,8) # will be reshaped
 
 
         self.fc1 = nn.Linear(2*self.width, 3*self.width)
@@ -192,39 +192,39 @@ class UNO3d(nn.Module):
         x_fc0 = F.gelu(x_fc0)
         
         x_fc0 = x_fc0.permute(0, 4, 1, 2, 3)
-        x_fc0 = F.pad(x_fc0, [self.padding,self.padding, self.padding,self.padding])
+        x_fc0 = F.pad(x_fc0, [self.padding,self.padding, self.padding,self.padding, self.padding,self.padding])
         
-        D1,D2 = x_fc0.shape[-2],x_fc0.shape[-1]
+        D1,D2,D3 = x_fc0.shape[-3],x_fc0.shape[-2],x_fc0.shape[-1]
 
-        x_c0 = self.L0(x_fc0,D1//2,D2//2)
+        x_c0 = self.L0(x_fc0,D1//2,D2//2,D3//2)
 
-        x_c1 = self.L1(x_c0,D1//4,D2//4)
+        x_c1 = self.L1(x_c0,D1//4,D2//4,D3//4)
 
 
-        x_c2 = self.L2(x_c1,D1//8,D2//8)
+        x_c2 = self.L2(x_c1,D1//8,D2//8,D3//8)
 
         
-        x_c3 = self.L3(x_c2,D1//8,D2//8)
+        x_c3 = self.L3(x_c2,D1//8,D2//8,D3//8)
 
 
-        x_c4 = self.L4(x_c3 ,D1//4,D2//4)
+        x_c4 = self.L4(x_c3 ,D1//4,D2//4,D3//4)
         x_c4 = torch.cat([x_c4, x_c1], dim=1)
 
-        x_c5 = self.L5(x_c4 ,D1//2,D2//2)
+        x_c5 = self.L5(x_c4 ,D1//2,D2//2,D3//2)
         x_c5 = torch.cat([x_c5, x_c0], dim=1)
 
-        x_c6 = self.L6(x_c5,D1,D2)
+        x_c6 = self.L6(x_c5,D1,D2,D3)
         x_c6 = torch.cat([x_c6, x_fc0], dim=1)
 
         if self.padding!=0:
-            x_c6 = x_c6[..., self.padding:-self.padding, self.padding:-self.padding]
+            x_c6 = x_c6[..., self.padding:-self.padding, self.padding:-self.padding, self.padding:-self.padding]
 
         x_c6 = x_c6.permute(0, 2, 3, 4, 1)
 
         x_fc1 = self.fc1(x_c6)
         x_fc1 = F.gelu(x_fc1)
-
-        x_fc1 = torch.cat([x_fc1, x_fc], dim=3)
+        
+        x_fc1 = torch.cat([x_fc1, x_fc], dim=-1)
         x_out = self.fc2(x_fc1)
         
         return x_out
