@@ -518,6 +518,13 @@ def get_model(spatial_dim, n_case_params, args):
                       modes1 = model_args['modes'],
                       modes2 = model_args['modes'],
                       n_case_params = n_case_params)
+            elif model_name == "geoFNO":
+                model = geoFNO2d(inputs_channel=model_args['inputs_channel'],
+                                outputs_channel=model_args['outputs_channel'],
+                        width = model_args['width'],
+                        modes1 = model_args['modes'],
+                        modes2 = model_args['modes'],
+                        n_case_params = n_case_params)
             elif model_name == "LSM":
                 if model_args["irregular_geo"]:
                     model = LSM_2d_ir(
