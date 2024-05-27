@@ -6,3 +6,4 @@ from .uno.uno import *
 from .kno import *
 from .unet import *
 from .auto_deeponet import AutoDeepONet
+from .geofno import geoFNO2d
