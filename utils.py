@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import random
-from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, UNO2d, KNO2d, UNet2d, LSM_2d_ir
+from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, UNO2d, KNO2d, UNet2d, LSM_2d_ir, geoFNO2d
 from dataset import *
 import os
 import shutil
