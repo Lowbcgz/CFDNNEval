@@ -269,7 +269,7 @@ class Koopman_Operator3D(nn.Module):
     def forward(self, x):
         batchsize = x.shape[0]
         # Fourier Transform
-        x_ft = torch.fft.rfft3(x)
+        x_ft = torch.fft.rfftn(x)
         # Koopman Operator Time Marching
         out_ft = torch.zeros(x_ft.shape, dtype=torch.cfloat, device = x.device)
         out_ft[:, :, :self.modes_x, :self.modes_y, :self.modes_z] = \
@@ -281,7 +281,7 @@ class Koopman_Operator3D(nn.Module):
         out_ft[:, :, -self.modes_x:, -self.modes_y:, :self.modes_z] = \
             self.time_marching(x_ft[:, :, -self.modes_x:, -self.modes_y:, :self.modes_z], self.koopman_matrix)
         #Inverse Fourier Transform
-        x = torch.fft.irfft2(out_ft, s=(x.size(-3), x.size(-2), x.size(-1)))
+        x = torch.fft.irfftn(out_ft, s=(x.size(-3), x.size(-2), x.size(-1)))
         return x
     
 class KNO3d(nn.Module):
@@ -329,6 +329,7 @@ class KNO3d(nn.Module):
         x = x.permute(0, 2, 3, 4, 1)
         x = self.dec(x) # Decoder
         x = x * mask
+        breakpoint()
         return x
 
     def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):

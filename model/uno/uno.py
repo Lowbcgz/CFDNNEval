@@ -180,7 +180,7 @@ class UNO3d(nn.Module):
 
 
         self.fc1 = nn.Linear(2*self.width, 3*self.width)
-        self.fc2 = nn.Linear(3*self.width + self.width//2, 1)
+        self.fc2 = nn.Linear(3*self.width + self.width//2, self.out_channels)
 
     def forward(self, x, case_params, mask, grid):
         x = torch.cat((x, mask, grid, case_params), dim=-1)
