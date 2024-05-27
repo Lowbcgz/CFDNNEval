@@ -308,7 +308,7 @@ class UNet3d(nn.Module):
             pass
         
     def pad(self, x1, x2): #pad x1, s.t. x1.shape = x2.shape
-        diffZ = x2.shape()[2] - x1.shape()[2]
+        diffZ = x2.size()[2] - x1.size()[2]
         diffY = x2.size()[3] - x1.size()[3]
         diffX = x2.size()[4] - x1.size()[4]
         x1 = F.pad(
