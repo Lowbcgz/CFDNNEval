@@ -35,4 +35,4 @@ CUDA_VISIBLE_DEVICES=3 python train.py ./config/KNO/config_cylinder_rRE_rBC.yaml
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/KNO/config_cylinder_rRE_rBC.yaml -c rBC | tee ./log/KNO/train/KNO_cylinder_rBC.out
 
 # periodic hills
-CUDA_VISIBLE_DEVICES=3 python train.py ./config/KNO/config_hills_rRE.yaml -c rRE | tee ./log/train/KNO_hills_rRE.out
+CUDA_VISIBLE_DEVICES=3 python train.py ./config/KNO/config_hills_rRE.yaml -c rRE | tee ./log/KNO/train/KNO_hills_rRE.out

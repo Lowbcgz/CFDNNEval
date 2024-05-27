@@ -41,4 +41,4 @@ CUDA_VISIBLE_DEVICES=3 python train.py ./config/UNet/config_cylinder_rRE_rBC.yam
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/UNet/config_cylinder_rRE_rBC.yaml -c rBC | tee ./log/UNet/train/UNet_cylinder_rBC.out
 
 # periodic hills
-CUDA_VISIBLE_DEVICES=3 python train.py ./config/UNet/config_hills_rRE.yaml -c rRE | tee ./log/train/UNet_hills_rRE.out
+CUDA_VISIBLE_DEVICES=3 python train.py ./config/UNet/config_hills_rRE.yaml -c rRE | tee ./log/UNet/train/UNet_hills_rRE.out
