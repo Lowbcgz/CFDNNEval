@@ -9,7 +9,7 @@ class NSCHDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',
-                 case_name = 'bc_ca_mob_phi_pre_re_uv0',
+                 case_name = 'ibc_phi_ca_mob_re_eps',
                  reduced_resolution = 1,
                  reduced_batch = 1,
                  stable_state_diff = 0.001,
@@ -46,6 +46,7 @@ class NSCHDataset(Dataset):
         mobs_list=[]
         cas_list=[]
         res_list=[]
+        eps_list=[]
         root_path = os.path.join(saved_folder, filename)
         with h5py.File(root_path, 'r') as f:
             # collect data
@@ -57,12 +58,14 @@ class NSCHDataset(Dataset):
                     mobs_list.append(np.array(data_group["mobs"],dtype=np.float32))
                     cas_list.append(np.array(data_group["CAs"],dtype=np.float32))
                     res_list.append(np.array(data_group["Res"],dtype=np.float32))
+                    eps_list.append(np.array(data_group["eps"],dtype=np.float32))
         fuvp=np.concatenate(fuvp_list,axis=0)[::reduced_batch]
         mobs=np.concatenate(mobs_list,axis=0)[::reduced_batch]
         cas=np.concatenate(cas_list,axis=0)[::reduced_batch]
         res=np.concatenate(res_list,axis=0)[::reduced_batch]
+        eps=np.concatenate(eps_list,axis=0)[::reduced_batch]
 
-        physic_prop= np.stack([cas, res, mobs],axis=-1) # (B, 3)
+        physic_prop= np.stack([cas, res, mobs, eps],axis=-1) # (B, 4)
         if norm_props:
             self.normalize_physics_props(physic_prop)
         # breakpoint()
@@ -111,13 +114,13 @@ class NSCHDataset(Dataset):
         _, x, y, _ = self.inputs.shape
         if reshape_parameters:
             #process the parameters shape
-            self.physic_prop = torch.from_numpy(physic_prop).float() #(Total cases, 3)
+            self.physic_prop = torch.from_numpy(physic_prop).float() #(Total cases, 4)
             cases, p = self.physic_prop.shape
             
             self.physic_prop = self.physic_prop.reshape(cases, 1, 1, p)
-            self.physic_prop = self.physic_prop.repeat(1, x, y, 1) #(cases, x, y, 3)
+            self.physic_prop = self.physic_prop.repeat(1, x, y, 1) #(cases, x, y, 4)
         else:
-            self.physic_prop = torch.from_numpy(physic_prop).float() #(Total cases, 3)
+            self.physic_prop = torch.from_numpy(physic_prop).float() #(Total cases, 4)
 
         #get grid
         self.grid = torch.from_numpy(fuv[0,0,:,:,:2]).float()  # (x, y, 2)
@@ -129,7 +132,7 @@ class NSCHDataset(Dataset):
         """
         Normalize the physics properties in-place.
         """
-        physic_prop = physic_prop/np.array([100.0,100.0,1.0])
+        physic_prop = physic_prop/np.array([100.0,100.0,1.0,0.1])  # cas, res, mobs, eps
         
     
     def __len__(self):

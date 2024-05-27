@@ -19,16 +19,15 @@ CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_cavity_ReD_bc_re.yaml
 CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_cavity_ReD_bc_re.yaml -c ReD_bc_re | tee ./log/train/FNO_cavity_ReD_bc_re.out
 
 # NSCH
-CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c bc | tee ./log/train/FNO_nsch_bc.out
+CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c ibc | tee ./log/train/FNO_nsch_ibc.out
 CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c ca | tee ./log/train/FNO_nsch_ca.out
 CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c mob | tee ./log/train/FNO_nsch_mob.out
 CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c phi | tee ./log/train/FNO_nsch_phi.out
-CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c pre | tee ./log/train/FNO_nsch_pre.out
 CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c re | tee ./log/train/FNO_nsch_re.out
-CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c uv0 | tee ./log/train/FNO_nsch_uv0.out
-CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c bc_ca_mob_phi_pre_re_uv0 | tee ./log/train/FNO_nsch_bc_ca_mob_phi_pre_re_uv0.out
-CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c ca_mob_re | tee ./log/train/FNO_nsch_ca_mob_re.out
-CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c phi_pre_uv0 | tee ./log/train/FNO_nsch_phi_pre_uv0.out
+CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c eps | tee ./log/train/FNO_nsch_eps.out
+CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c ibc_phi_ca_mob_re_eps | tee ./log/train/FNO_ibc_phi_ca_mob_re_eps.out
+CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c ca_mob_re_eps | tee ./log/train/FNO_nsch_ca_mob_re_eps.out
+CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c phi_ibc | tee ./log/train/FNO_nsch_phi_ibc.out
 
 # Darcy
 CUDA_VISIBLE_DEVICES=7 python train.py ./config/FNO/config_Darcy_PDEBench.yaml -c PDEBench | tee ./log/train/FNO_darcy_PDEBench.out

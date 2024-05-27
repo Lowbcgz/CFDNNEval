@@ -18,16 +18,15 @@ CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cavity_ReD_bc_re.yaml
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cavity_ReD_bc_re.yaml -c ReD_bc_re --test | tee ./log/test/LSM_cavity_ReD_bc_re.out
 
 # NSCH
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c bc --test | tee ./log/test/LSM_nsch_bc.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c ca --test | tee ./log/test/LSM_nsch_ca.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c mob --test | tee ./log/test/LSM_nsch_mob.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c phi --test | tee ./log/test/LSM_nsch_phi.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c pre --test | tee ./log/test/LSM_nsch_pre.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c re --test | tee ./log/test/LSM_nsch_re.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c uv0 --test | tee ./log/test/LSM_nsch_uv0.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c bc_ca_mob_phi_pre_re_uv0 --test | tee ./log/test/LSM_nsch_bc_ca_mob_phi_pre_re_uv0.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c ca_mob_re --test | tee ./log/test/LSM_nsch_ca_mob_re.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c phi_pre_uv0 --test | tee ./log/test/LSM_nsch_phi_pre_uv0.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c ibc --test | tee ./log/test/LSM_nsch_ibc.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c ca --test | tee ./log/test/LSM_nsch_ca.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c mob --test | tee ./log/test/LSM_nsch_mob.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c phi --test | tee ./log/test/LSM_nsch_phi.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c re --test | tee ./log/test/LSM_nsch_re.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c eps --test | tee ./log/test/LSM_nsch_eps.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c ibc_phi_ca_mob_re_eps --test | tee ./log/test/LSM_ibc_phi_ca_mob_re_eps.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c ca_mob_re_eps --test | tee ./log/test/LSM_nsch_ca_mob_re_eps.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c phi_ibc --test | tee ./log/test/LSM_nsch_phi_ibc.out
 
 # Darcy
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_Darcy_PDEBench.yaml -c PDEBench --test | tee ./log/test/LSM_darcy_PDEBench.out
