@@ -25,7 +25,7 @@ dataset:
   multi_step_size: 3
 # dataloader相关参数
 dataloader:
-  train_batch_size: 128
+  train_batch_size: 32
   val_batch_size: 16
   test_batch_size: 1
   num_workers: 4
@@ -43,8 +43,8 @@ model:
 # 优化器相关参数
 optimizer:
   name: 'Adam'
-  lr: 1.e-3
-  weight_decay: 1.e-4
+  lr: 5.e-4
+  weight_decay: 1.e-5
 # scheduler相关参数
 scheduler:
   name: "StepLR"

@@ -329,7 +329,7 @@ class KNO3d(nn.Module):
         x = x.permute(0, 2, 3, 4, 1)
         x = self.dec(x) # Decoder
         x = x * mask
-        breakpoint()
+
         return x
 
     def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
