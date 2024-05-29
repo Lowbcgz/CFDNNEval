@@ -1,0 +1,56 @@
+flow_name: 'hills'
+model_name: "AutoDeepONet"
+if_training: True
+continue_training: False
+model_path: null
+saved_dir: "./checkpoint/"
+output_dir: "./output/"
+save_period: 10
+plot_interval: 1
+# 训练相关参数
+seed: 0
+training_type: "autoregressive"
+epochs: 100
+# 数据集相关参数 
+dataset:
+  single_file: True
+  saved_folder: "/data1/FluidData/periodic_hills/"
+  reduced_resolution: 2
+  reduced_batch: 1
+  data_delta_time: 0.1
+  delta_time: 0.1 
+  stable_state_diff: 0.001
+  norm_props: True
+  norm_bc: True  
+  case_name: 'rRE'
+  multi_step_size: 3
+  reshape_parameters: False
+# dataloader相关参数
+dataloader:
+  train_batch_size: 32
+  val_batch_size: 32
+  test_batch_size: 1
+  num_workers: 4
+  pin_memory: False
+# 模型相关参数
+model:
+  irregular_geo: False      
+  inputs_channel: 4
+  outputs_channel: 4
+  h: 32
+  w: 32
+  d: 32
+  width: 100
+  trunk_depth: 8
+  branch_depth: 8
+  act_fn: "relu"
+# 优化器相关参数
+optimizer:
+  name: 'Adam'
+  lr: 5.e-4
+  weight_decay: 1.e-5
+# scheduler相关参数
+scheduler:
+  name: "StepLR"
+  step_size: 20
+  gamma: 0.9

@@ -29,8 +29,6 @@ CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_NSCH_ALL.yaml -c
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_NSCH_ALL.yaml -c phi_ibc --test | tee ./log/test/DeepONet_nsch_phi_ibc.out
 
 # # Darcy
-# CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_Darcy_ar_as.yaml -c ar --test | tee ./log/test/DeepONet_darcy_ar.out
-# CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_Darcy_ar_as.yaml -c as --test | tee ./log/test/DeepONet_darcy_as.out
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_Darcy_PDEBench.yaml -c PDEBench --test | tee ./log/test/DeepONet_darcy_PDEBench.out
 
 # cylinder / ircylinder
@@ -39,3 +37,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_ircylinder_irRE_
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_cylinder_rRE_rBC.yaml -c rRE --test | tee ./log/test/DeepONet_cylinder_rRE.out
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_cylinder_rRE_rBC.yaml -c rRE_rBC --test | tee ./log/test/DeepONet_cylinder_rRE_rBC.out
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_cylinder_rRE_rBC.yaml -c rBC --test | tee ./log/test/DeepONet_cylinder_rBC.out
+
+# periodic hills
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_hills_rRE.yaml -c rRE --test | tee ./log/test/DeepONet_hills_rRE.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_irhills_irRE.yaml -c irRE --test | tee ./log/test/DeepONet_irhills_irRE.out
