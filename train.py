@@ -465,7 +465,7 @@ if __name__ == "__main__":
 
     # set use_norm
     use_norm_default=True
-    if args["flow_name"] in ["TVG","Darcy"]:
+    if args["flow_name"] in ["TGV","Darcy"]:
         use_norm_default = False
     args["use_norm"] = args.get("use_norm", use_norm_default)
     print(args)
