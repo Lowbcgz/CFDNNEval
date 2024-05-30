@@ -1,0 +1,46 @@
+flow_name: 'Darcy'
+model_name: "OFormer"
+if_training: True
+continue_training: False
+model_path: null
+saved_dir: "./checkpoint/"
+output_dir: "./output/"
+save_period: 10
+plot_interval: 1
+is_irregular: False
+# 训练相关参数
+seed: 0
+epochs: 100
+# 数据集相关参数 
+dataset:
+  single_file: True
+  saved_folder: "/home/data2/FluidData/darcy"
+  reduced_resolution: 1
+  reduced_batch: 1 
+  case_name: 'darcy'
+  multi_step_size: 1
+# dataloader相关参数
+dataloader:
+  train_batch_size: 16
+  val_batch_size: 16
+  test_batch_size: 1
+  num_workers: 1
+  pin_memory: False
+# 模型相关参数
+model:
+  x_dim: 2
+  inputs_channel: 1
+  outputs_channel: 3
+# 优化器相关参数
+optimizer:
+  name: 'AdamW'
+  lr: 6.e-4
+  weight_decay: 1.e-4
+# scheduler相关参数
+scheduler:
+  name: "OneCycleLR"
+  max_lr: 6.e-4
+  total_steps: 100
+  div_factor: 1000
+  pct_start: 0.3
+  final_div_factor: 1000

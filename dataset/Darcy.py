@@ -92,7 +92,7 @@ class PDEDarcyDataset(Dataset):
     beta = 1. # fix
 
     def __init__(self, 
-                 filename="2D_DarcyFlow_beta1.0_Train.hdf5",
+                 filename="darcy.hdf5",
                  saved_folder="/data1/FluidData/darcy",
                  reduced_resolution = 1,
                  reduced_batch = 1,
@@ -142,7 +142,7 @@ class PDEDarcyDataset(Dataset):
             self.grid = torch.from_numpy(np.stack([X, Y], axis=-1))
             
         self.inputs = torch.from_numpy(inputs).unsqueeze(-1) # [n, x, y, 1]
-        self.label = torch.from_numpy(label).squeeze(1).unsqueeze(-1) # [n, x, y, 1]
+        self.label = torch.from_numpy(label.transpose(0,2,3,1)) # [n, x, y, 1]
         self.mask = torch.ones(self.inputs.shape[1:3]).unsqueeze(-1) # [x, y, 1]
         if reshape_parameters:
             self.case_params = torch.full(self.inputs.shape[1:3], self.beta).unsqueeze(-1) # [x, y, num_case_params]
