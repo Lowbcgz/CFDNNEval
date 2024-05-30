@@ -12,6 +12,7 @@ from functools import reduce
 from utils import setup_seed, get_model, get_dataset, get_dataloader, get_min_max
 from visualize import *
 from dataset import *
+from tqdm import tqdm
 
 
 
@@ -24,7 +25,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
     step = 0
     (channel_min, channel_max) = args["channel_min_max"] 
     channel_min, channel_max = channel_min.to(device), channel_max.to(device)
-    for x, y, mask, case_params, grid, _ in train_loader:
+    for x, y, mask, case_params, grid, _ in tqdm(train_loader):
         step += 1
         # batch_size = x.size(0)
         loss = 0
