@@ -39,38 +39,38 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
 
         y = y * mask
 
-        if args["training_type"] in ['autoregressive']:
-            if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
-                #Model run one_step
-                if case_params.shape[-1] == 0: #darcy
-                    case_params = case_params.reshape(0)
+        
+        if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
+            #Model run one_step
+            if case_params.shape[-1] == 0: #darcy
+                case_params = case_params.reshape(0)
 
-                loss, pred , info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
-                
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                _batch = pred.size(0)
-                train_loss += loss.item()
-                train_l_inf = max(train_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
-            else:
-                # Autoregressive loop
-                preds=[]
-                total_loss = 0
-                for i in range(train_loader.dataset.multi_step_size):
-                    loss, pred , info= model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], loss_fn=loss_fn)
-                    preds.append(pred)
-                    total_loss = total_loss + loss
-                    x = pred
-                preds=torch.stack(preds, dim=1)
-                _batch = preds.size(0)
-                # loss = loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1))
-                optimizer.zero_grad()
-                total_loss.backward()
-                optimizer.step()
+            loss, pred , info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            _batch = pred.size(0)
+            train_loss += loss.item()
+            train_l_inf = max(train_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+        else:
+            # Autoregressive loop
+            preds=[]
+            total_loss = 0
+            for i in range(train_loader.dataset.multi_step_size):
+                loss, pred , info= model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], loss_fn=loss_fn)
+                preds.append(pred)
+                total_loss = total_loss + loss
+                x = pred
+            preds=torch.stack(preds, dim=1)
+            _batch = preds.size(0)
+            # loss = loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1))
+            optimizer.zero_grad()
+            total_loss.backward()
+            optimizer.step()
 
-                train_loss += total_loss.item()
-                train_l_inf = max(train_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+            train_loss += total_loss.item()
+            train_l_inf = max(train_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
     train_loss /= step      
     t2 = default_timer()
     return train_loss, train_l_inf, t2 - t1
@@ -106,46 +106,46 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
                 x = (x - channel_min)/(channel_max-channel_min) # normalization
                 y = (y - channel_min)/(channel_max-channel_min)
             y = y * mask
-            if training_type == 'autoregressive':
-                if getattr(val_loader.dataset,"multi_step_size", 1)==1:
-                    # Model run
-                    if case_params.shape[-1] == 0: #darcy
-                        case_params = case_params.reshape(0)
-                    pred = model(x, case_params, mask, grid)
-                    # Loss calculation
-                    _batch = pred.size(0)
+            
+            if getattr(val_loader.dataset,"multi_step_size", 1)==1:
+                # Model run
+                if case_params.shape[-1] == 0: #darcy
+                    case_params = case_params.reshape(0)
+                pred = model(x, case_params, mask, grid)
+                # Loss calculation
+                _batch = pred.size(0)
 
-                    val_l2 += loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1)).item()
-                    val_l_inf = max(val_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
-                    
+                val_l2 += loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1)).item()
+                val_l_inf = max(val_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+                
 
-                    for name in metric_names:
-                        metric_fn = getattr(metrics, name)
-                        cw, sw=metric_fn(pred, y)
-                        res_dict["cw_res"][name].append(cw)
-                        res_dict["sw_res"][name].append(sw)
-                    
-                    # if step % plot_interval == 0:
-                    #     image_dir = Path(ckpt_dir + "/images")
-                    #     if not os.path.exists(image_dir):
-                    #         os.makedirs(image_dir)
-                    #     plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
-                else:
-                    # Autoregressive loop
-                    preds=[]
-                    for i in range(val_loader.dataset.multi_step_size):
-                        pred = model(x, case_params, mask[:,i], grid)
-                        preds.append(pred)
-                        x = pred
-                    preds=torch.stack(preds, dim=1)
-                    _batch = preds.size(0)
-                    val_l2 += loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1)).item()
-                    val_l_inf = max(val_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
-                    for name in metric_names:
-                        metric_fn = getattr(metrics, name)
-                        cw, sw=metric_fn(preds, y)
-                        res_dict["cw_res"][name].append(cw)
-                        res_dict["sw_res"][name].append(sw)
+                for name in metric_names:
+                    metric_fn = getattr(metrics, name)
+                    cw, sw=metric_fn(pred, y)
+                    res_dict["cw_res"][name].append(cw)
+                    res_dict["sw_res"][name].append(sw)
+                
+                # if step % plot_interval == 0:
+                #     image_dir = Path(ckpt_dir + "/images")
+                #     if not os.path.exists(image_dir):
+                #         os.makedirs(image_dir)
+                #     plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
+            else:
+                # Autoregressive loop
+                preds=[]
+                for i in range(val_loader.dataset.multi_step_size):
+                    pred = model(x, case_params, mask[:,i], grid)
+                    preds.append(pred)
+                    x = pred
+                preds=torch.stack(preds, dim=1)
+                _batch = preds.size(0)
+                val_l2 += loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1)).item()
+                val_l_inf = max(val_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+                for name in metric_names:
+                    metric_fn = getattr(metrics, name)
+                    cw, sw=metric_fn(preds, y)
+                    res_dict["cw_res"][name].append(cw)
+                    res_dict["sw_res"][name].append(sw)
 
     #reshape
     for name in metric_names:
