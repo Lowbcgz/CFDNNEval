@@ -111,10 +111,6 @@ class HillsDataset(Dataset):
                         #load u ,v, w, p, grid and get mask
                         u, v, w, p = np.array(data['Vx'], dtype=np.float32), np.array(data['Vy'], np.float32), np.array(data['Vz'], np.float32), np.array(data['P'], np.float32)
                         index = np.isnan(u)
-                        u = (u - self.statistics['vel_x_min']) / (self.statistics['vel_x_max'] - self.statistics['vel_x_min'])
-                        v = (v - self.statistics['vel_y_min']) / (self.statistics['vel_y_max'] - self.statistics['vel_y_min'])
-                        w = (w - self.statistics['vel_z_min']) / (self.statistics['vel_z_max'] - self.statistics['vel_z_min'])
-                        p = (p - self.statistics['prs_min']) / (self.statistics['prs_max'] - self.statistics['prs_min'])
                         u[np.isnan(u)] = 0
                         v[np.isnan(v)] = 0
                         w[np.isnan(w)] = 0

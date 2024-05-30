@@ -39,3 +39,6 @@ CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_Darcy_PDEBench.yaml 
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/UNet/config_cylinder_rRE_rBC.yaml -c rRE_rBC | tee ./log/UNet/train/UNet_cylinder_rRE_rBC.out
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/UNet/config_cylinder_rRE_rBC.yaml -c rRE | tee ./log/UNet/train/UNet_cylinder_rRE.out
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/UNet/config_cylinder_rRE_rBC.yaml -c rBC | tee ./log/UNet/train/UNet_cylinder_rBC.out
+
+# periodic hills
+CUDA_VISIBLE_DEVICES=3 python train.py ./config/UNet/config_hills_rRE.yaml -c rRE | tee ./log/UNet/train/UNet_hills_rRE.out

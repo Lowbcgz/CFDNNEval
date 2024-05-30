@@ -244,7 +244,7 @@ class UNet3d(nn.Module):
         super(UNet3d, self).__init__()
 
         features = init_features
-        self.encoder1 = UNet3d._block(in_channels, features, name="enc1")
+        self.encoder1 = UNet3d._block(in_channels + 1 + n_case_params, features, name="enc1")
         self.pool1 = nn.MaxPool3d(kernel_size=2, stride=2)
         self.encoder2 = UNet3d._block(features, features * 2, name="enc2")
         self.pool2 = nn.MaxPool3d(kernel_size=2, stride=2)
@@ -266,7 +266,7 @@ class UNet3d(nn.Module):
 
         self.conv = nn.Conv3d(in_channels=features, out_channels=out_channels, kernel_size=1)
 
-    def forward(self, x, case_params, mask):
+    def forward(self, x, case_params, mask, grid):
         x = torch.cat((x, mask, case_params), dim=-1)
         x = x.permute(0, 4, 1, 2, 3)
 
@@ -295,8 +295,20 @@ class UNet3d(nn.Module):
         dec1 = self.decoder1(dec1)
         return (self.conv(dec1)).permute(0, 2, 3, 4, 1) * mask
 
+    def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
+        info = {}
+        pred = self(x, case_params, mask, grid)
+        
+        if loss_fn is not None:
+            ## defined your specific loss calculations here
+            loss = loss_fn(pred, y)
+            return loss, pred, info
+        else:
+            #TODO: default loss_fn
+            pass
+        
     def pad(self, x1, x2): #pad x1, s.t. x1.shape = x2.shape
-        diffZ = x2.shape()[2] - x1.shape()[2]
+        diffZ = x2.size()[2] - x1.size()[2]
         diffY = x2.size()[3] - x1.size()[3]
         diffX = x2.size()[4] - x1.size()[4]
         x1 = F.pad(
