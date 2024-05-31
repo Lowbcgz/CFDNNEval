@@ -26,8 +26,8 @@ dataset:
   multi_step_size: 3
 # dataloader相关参数
 dataloader:
-  train_batch_size: 64
-  val_batch_size: 16
+  train_batch_size: 128
+  val_batch_size: 128
   test_batch_size: 1
   num_workers: 4
   pin_memory: False
@@ -36,7 +36,7 @@ model:
   irregular_geo: False
   inputs_channel: 3
   outputs_channel: 3
-  width: 64
+  width: 32
   num_token: 4
   num_basis: 12
   patch_size: "4,4"
@@ -44,7 +44,7 @@ model:
 # 优化器相关参数
 optimizer:
   name: 'Adam'
-  lr: 5.e-4
+  lr: 1.e-3
   weight_decay: 1.e-4
 # scheduler相关参数
 scheduler:
