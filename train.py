@@ -25,7 +25,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
     step = 0
     (channel_min, channel_max) = args["channel_min_max"] 
     channel_min, channel_max = channel_min.to(device), channel_max.to(device)
-    for x, y, mask, case_params, grid, _ in tqdm(train_loader):
+    for x, y, mask, case_params, grid, _, aux_data in tqdm(train_loader):
         step += 1
         # batch_size = x.size(0)
         loss = 0
@@ -34,6 +34,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
         grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims] or [b, Nx, dims] 
         mask = mask.to(device) # mask [b, x1, ..., xd, 1] or (b, Nx, 1)
         case_params = case_params.to(device) #parameters [b, x1, ..., xd, p] or [b, Nx, p]
+        aux_data = aux_data.to(device)  # mainly for NUFNO, likely used for hidden state in traditional RNN model
         if args["use_norm"]:
             x = (x - channel_min)/(channel_max-channel_min) # normalization
             y = (y - channel_min)/(channel_max-channel_min)
@@ -46,7 +47,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
                 if case_params.shape[-1] == 0: #darcy
                     case_params = case_params.reshape(0)
 
-                loss, pred , info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
+                loss, pred , _, _ = model.one_forward_step(x, case_params, mask,  grid, y, aux_data = aux_data, loss_fn=loss_fn) 
                 
                 optimizer.zero_grad()
                 loss.backward()
@@ -59,7 +60,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
                 preds=[]
                 total_loss = 0
                 for i in range(train_loader.dataset.multi_step_size):
-                    loss, pred , info= model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], loss_fn=loss_fn)
+                    loss, pred , aux_data, _ = model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], aux_data=aux_data, loss_fn=loss_fn)
                     preds.append(pred)
                     total_loss = total_loss + loss
                     x = pred
@@ -95,7 +96,7 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
     (channel_min, channel_max) = args["channel_min_max"] 
     channel_min, channel_max = channel_min.to(device), channel_max.to(device)
     with torch.no_grad():
-        for x, y, mask, case_params, grid, case_id in val_loader:
+        for x, y, mask, case_params, grid, case_id, aux_data in val_loader:
             step += 1
             # batch_size = x.size(0)
             x = x.to(device) # x: input tensor (The previous time step) [b, x1, ..., xd, v]
@@ -103,6 +104,7 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
             grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims]
             mask = mask.to(device) # mask [b, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
+            aux_data = aux_data.to(device)
             if args["use_norm"]:
                 x = (x - channel_min)/(channel_max-channel_min) # normalization
                 y = (y - channel_min)/(channel_max-channel_min)
@@ -112,7 +114,7 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
                     # Model run
                     if case_params.shape[-1] == 0: #darcy
                         case_params = case_params.reshape(0)
-                    pred = model(x, case_params, mask, grid)
+                    pred, _ = model(x, case_params, mask, grid, aux_data= aux_data)
                     # Loss calculation
                     _batch = pred.size(0)
 
@@ -135,10 +137,10 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
                     # Autoregressive loop
                     preds=[]
                     for i in range(val_loader.dataset.multi_step_size):
-                        pred = model(x, case_params, mask[:,i], grid)
+                        pred, aux_data= model(x, case_params, mask[:,i], grid, aux_data=aux_data)
                         preds.append(pred)
                         x = pred
-                    preds=torch.stack(preds, dim=1)
+                    preds=torch.stack(preds, dim=1)   # stack in T
                     _batch = preds.size(0)
                     val_l2 += loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1)).item()
                     val_l_inf = max(val_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
@@ -202,7 +204,7 @@ def test_loop(test_loader, model, device, training_type, output_dir, args, metri
     gts = []
     t1 = default_timer()
     with torch.no_grad():
-        for x, y, mask, case_params, grid, case_id in test_loader:
+        for x, y, mask, case_params, grid, case_id, aux_data in test_loader:
             case_id = case_id.item()
             if prev_case_id != case_id:
                 prev_case_id = -1
@@ -214,6 +216,7 @@ def test_loop(test_loader, model, device, training_type, output_dir, args, metri
             grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims] 
             mask = mask.to(device) # mask [b, x1, ..., xd, 1] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
+            aux_data = aux_data.to(device)
             if args["use_norm"]:
                 x = (x - channel_min)/(channel_max-channel_min) # normalization
                 y = (y - channel_min)/(channel_max-channel_min)
@@ -239,11 +242,12 @@ def test_loop(test_loader, model, device, training_type, output_dir, args, metri
                         preds = []
                         gts = []
                     else:
-                        x = pred.detach().clone() # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
+                        x = pred     # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
+                        aux_data = aux_out
                 else:
                     raise Exception(f"test_type {test_type} is not support for a single_step test_loader ")
                 
-                pred = model(x, case_params, mask, grid)
+                pred, aux_out = model(x, case_params, mask, grid, aux_data= aux_data)
 
                 if test_type == 'frames':
                     for name in metric_names:
@@ -260,7 +264,7 @@ def test_loop(test_loader, model, device, training_type, output_dir, args, metri
                 # autoregressive loop for multi_step
                 preds=[]
                 for i in range(test_loader.dataset.multi_step_size):
-                    pred = model(x, case_params, mask[:,i], grid)
+                    pred, aux_data = model(x, case_params, mask[:,i], grid, aux_data = aux_data)
                     preds.append(pred)
                     x = pred
                 preds=torch.stack(preds, dim=1)

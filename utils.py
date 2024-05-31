@@ -162,6 +162,8 @@ def get_dataset(args):
         else:
             test_ms_data = None
     elif args["flow_name"] == "ircylinder":
+        if args["model_name"] == "NUFNO":
+            IRCylinderDataset = IRCylinderDataset_NUNO
         train_data = IRCylinderDataset(
                                 filename='cylinder_train.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
@@ -388,6 +390,8 @@ def get_dataset(args):
         else:
             test_ms_data = None
     elif args["flow_name"] == "irhills":
+        if args["model_name"] == "NUFNO":
+            IRHillsDataset = IRHillsDataset_NUNO
         train_data = IRHillsDataset(
                                 filename=args['flow_name'][2:] + '_train.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
