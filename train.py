@@ -75,7 +75,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
     t2 = default_timer()
     return train_loss, train_l_inf, t2 - t1
 
-def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoch, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 1):
+def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 1):
     model.eval()
     val_l2 = 0
     val_l_inf = 0
@@ -169,7 +169,7 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
 
     return val_l2, val_l_inf
 
-def test_loop(test_loader, model, device, training_type, output_dir, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 10, test_type = 'frames'):
+def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 10, test_type = 'frames'):
     model.eval()
     step = 0
 
@@ -368,11 +368,11 @@ def main(args):
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)
         print("start testing...")
-        test_loop(test_loader, model, device, args["training_type"], output_dir, args, test_type='frames')
+        test_loop(test_loader, model, device, output_dir, args, test_type='frames')
         if test_ms_data is not None:  # not darcy
-            test_loop(test_ms_loader, model, device, args["training_type"], output_dir, args, test_type='multi_step')
+            test_loop(test_ms_loader, model, device, output_dir, args, test_type='multi_step')
         if args["flow_name"] not in ["Darcy"]:
-            test_loop(test_loader, model, device, args["training_type"], output_dir, args, test_type='accumulate')
+            test_loop(test_loader, model, device, output_dir, args, test_type='accumulate')
         print("Done") 
         return
     ## if continue training, resume model from checkpoint
@@ -429,7 +429,7 @@ def main(args):
             }, saved_path + "-latest.pt")
         if (epoch+1) % args["save_period"] == 0:
             print("====================validate====================")
-            val_l2_full, val_l_inf = val_loop(val_loader, model, loss_fn, device, args["training_type"], output_dir, epoch, args, plot_interval=args['plot_interval'])
+            val_l2_full, val_l_inf = val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, plot_interval=args['plot_interval'])
             print(f"[Epoch {epoch}] val_l2_full: {val_l2_full} val_l_inf: {val_l_inf}")
             print("================================================")
             if val_l2_full < min_val_loss:

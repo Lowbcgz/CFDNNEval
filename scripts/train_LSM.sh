@@ -30,6 +30,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_NSCH_ALL.yaml -c phi_
 
 # Darcy
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_Darcy_PDEBench.yaml -c PDEBench | tee ./log/train/LSM_darcy_PDEBench.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_Darcy_darcy.yaml -c darcy | tee ./log/train/LSM_darcy_darcy.out
 
 # cylinder / ircylinder
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_ircylinder_irRE_irBC.yaml -c irRE | tee ./log/train/LSM_ircylinder_irRE.out
