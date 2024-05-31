@@ -33,13 +33,8 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
         grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims] or [b, Nx, dims] 
         mask = mask.to(device) # mask [b, x1, ..., xd, 1] or (b, Nx, 1)
         case_params = case_params.to(device) #parameters [b, x1, ..., xd, p] or [b, Nx, p]
-        if args["use_norm"]:
-            x = (x - channel_min)/(channel_max-channel_min) # normalization
-            y = (y - channel_min)/(channel_max-channel_min)
-
         y = y * mask
 
-        
         if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
             #Model run one_step
             if case_params.shape[-1] == 0: #darcy
@@ -91,8 +86,6 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
 
-    (channel_min, channel_max) = args["channel_min_max"] 
-    channel_min, channel_max = channel_min.to(device), channel_max.to(device)
     with torch.no_grad():
         for x, y, mask, case_params, grid, case_id in val_loader:
             step += 1
@@ -102,9 +95,6 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
             grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims]
             mask = mask.to(device) # mask [b, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
-            if args["use_norm"]:
-                x = (x - channel_min)/(channel_max-channel_min) # normalization
-                y = (y - channel_min)/(channel_max-channel_min)
             y = y * mask
             
             if getattr(val_loader.dataset,"multi_step_size", 1)==1:
@@ -193,9 +183,6 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
 
-    (channel_min, channel_max) = args["channel_min_max"] 
-    channel_min, channel_max = channel_min.to(device), channel_max.to(device)
-
     prev_case_id = -1
     preds = []
     gts = []
@@ -213,11 +200,8 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
             grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims] 
             mask = mask.to(device) # mask [b, x1, ..., xd, 1] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
-            if args["use_norm"]:
-                x = (x - channel_min)/(channel_max-channel_min) # normalization
-                y = (y - channel_min)/(channel_max-channel_min)
-
             y = y * mask
+            
             if getattr(test_loader.dataset,"multi_step_size", 1) ==1:
                 # batch_size = x.size(0)
                 if test_type == 'frames':
@@ -351,10 +335,16 @@ def main(args):
     args["model"]["num_points"] = reduce(lambda x,y: x*y, grid.shape[1:-1])  # get num_points, especially of irregular geometry(point clouds)
 
     # get min_max per channel of train-set on the fly for normalization.
-    channel_min, channel_max = get_min_max(train_loader)   
-    args["channel_min_max"] = (channel_min, channel_max)
+    
     if args["use_norm"]:
+        channel_min, channel_max = get_min_max(train_loader)   
+        args["channel_min_max"] = (channel_min, channel_max)
         print("use min_max normalization with min=", channel_min.tolist(), ", max=", channel_max.tolist())
+        train_loader.dataset.apply_norm(channel_min, channel_max)
+        val_loader.dataset.apply_norm(channel_min, channel_max)
+        test_loader.dataset.apply_norm(channel_min, channel_max)
+        if test_ms_data is not None:
+            test_ms_loader.dataset.apply_norm(channel_min, channel_max)
 
     #model
     model = get_model(spatial_dim, n_case_params, args)

@@ -176,9 +176,11 @@ class CavityDataset(Dataset):
         self.labels = self.labels[:num_samples_max, ...]
         self.case_ids = self.case_ids[:num_samples_max, ...]
         self.masks = self.masks[:num_samples_max, ...]
-
         # print(self.inputs.shape, self.labels.shape, self.case_ids.shape, self.masks.shape, self.case_params.shape)
-
+    
+    def apply_norm(self, channel_min, channel_max):
+        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
+        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
     def normalize_physics_props(self, case_params):
         """
         Normalize the physics properties in-place.

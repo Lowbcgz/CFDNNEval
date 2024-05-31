@@ -134,7 +134,10 @@ class NSCHDataset(Dataset):
         """
         physic_prop = physic_prop/np.array([100.0,100.0,1.0,0.1])  # cas, res, mobs, eps
         
-    
+    def apply_norm(self, channel_min, channel_max):
+        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
+        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
+
     def __len__(self):
         return len(self.inputs)
 

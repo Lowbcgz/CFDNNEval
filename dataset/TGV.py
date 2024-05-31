@@ -129,7 +129,10 @@ class TGVDataset(Dataset):
         """
         physic_prop = physic_prop/np.array([1000.0,15.707,1.0])  #re,edge,nu
         
-    
+    def apply_norm(self, channel_min, channel_max):
+        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
+        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
+
     def __len__(self):
         return len(self.inputs)
 
