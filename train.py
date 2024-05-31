@@ -38,7 +38,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
         if args["use_norm"]:
             x = (x - channel_min)/(channel_max-channel_min) # normalization
             y = (y - channel_min)/(channel_max-channel_min)
-
+        # print(mask.shape, y.shape, channel_min.shape)
         y = y * mask
 
         if args["training_type"] in ['autoregressive']:
@@ -348,7 +348,7 @@ def main(args):
     train_loader, val_loader, test_loader, test_ms_loader = get_dataloader(train_data, val_data, test_data, test_ms_data, args)
 
     # set some train args
-    input, output, _, case_params, grid, _, = next(iter(val_loader))
+    input, output, _, case_params, grid, _, _ = next(iter(val_loader))
     print("input tensor shape: ", input.shape[1:])
     print("output tensor shape: ", output.shape[1:] if val_loader.dataset.multi_step_size==1 else output.shape[2:])
     spatial_dim = grid.shape[-1]

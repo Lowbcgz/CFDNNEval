@@ -29,9 +29,9 @@ def cal_grid_shape(tot_size, aspect_ratios: list[float]):
 class NUNO_Data_utils:
     def __init__(self) -> None:
         pass
-    def _data_preprocessing(self, x, case_params, mask, grid, n_subdomains=8):
+    def _data_preprocessing(self, x,  grid, tree, n_subdomains=8):
 
-        """
+        """self
         Only generate KDTree for one time !!! This function will be first called in trainset. 
 
 
@@ -41,8 +41,8 @@ class NUNO_Data_utils:
             NearestNDInterpolator, RegularGridInterpolator
         with torch.no_grad():
             oversamp_ratio = 1.0
-            xyz = grid[0].cpu().numpy()                 # shape: (19517, 3)
-            input_point_cloud = x.detach().cpu().numpy()     # shape: (1000, 19517, 5)
+            xyz = grid                 # shape: (19517, 3)
+            input_point_cloud = x    # shape: (1000, 19517, 5)
             batch_size = x.shape[0]
             # T = batch_size
 
@@ -50,11 +50,12 @@ class NUNO_Data_utils:
             # t1 = default_timer()
             point_cloud = xyz.tolist()
             # Use kd-tree to generate subdomain division
-            tree= KDTree(
-                point_cloud, dim=3, n_subdomains=n_subdomains, 
-                n_blocks=8, return_indices=True
-            )
-            tree.solve()
+            if tree == None:
+                tree= KDTree(
+                    point_cloud, dim=3, n_subdomains=n_subdomains, 
+                    n_blocks=8, return_indices=True
+                )
+                tree.solve()
             # Gather subdomain info
             bbox_sd = tree.get_subdomain_bounding_boxes()
             indices_sd = tree.get_subdomain_indices()
@@ -101,7 +102,7 @@ class NUNO_Data_utils:
 
             # Interpolation from point cloud to uniform grid
             # t1 = default_timer()
-            print("Start interpolation...")
+            # print("Start interpolation...")
             input_sd_grid = []
             point_cloud = xyz
             point_cloud_val = np.transpose(input_point_cloud, (1, 2, 0)) 
@@ -140,24 +141,25 @@ class NUNO_Data_utils:
             # t2 = default_timer()
             # print("Finish interpolation, time elapsed: {:.1f}s".format(t2-t1))
 
-        xyz_sd = torch.from_numpy(xyz_sd).cuda().float()
-        xyz_sd = xyz_sd.repeat([batch_size, 1, 1, 1])\
-                .permute(0, 2, 1, 3)\
-                .reshape(batch_size*n_subdomains, -1, 1, 1, 3)
-                # shape: (batch * n_subdomains, n_points_sd_padded, 1, 1, 3)
-        input_point_cloud_sd = torch.from_numpy(input_point_cloud_sd).float()
-                # shape: (ntotal, n_points_sd_padded, output_dim, n_subdomains)
-        input_u_sd_mask = torch.from_numpy(input_u_sd_mask).cuda().float()
-                # shape: (1, n_points_sd_padded, 1, n_subdomains)
-        input_sd_grid = torch.from_numpy(input_sd_grid).float()
-                # shape: (n_total, s2, s1, s3, input_dim + output_dim, n_subdomains)
+        # xyz_sd = torch.from_numpy(xyz_sd).cuda().float()
+        xyz_sd = xyz_sd\
+                .transpose((0, 2, 1, 3))\
+                .reshape(n_subdomains, -1, 1, 1, 3)
+                # shape: (n_subdomains, n_points_sd_padded, 1, 1, 3)
+        input_point_cloud_sd = input_point_cloud_sd.transpose((0, 1, 3, 2))
+                # shape: (ntotal, n_points_sd_padded, n_subdomains, output_dim)
+        input_u_sd_mask = torch.from_numpy(input_u_sd_mask).permute(0, 1, 3, 2).repeat([batch_size, 1, 1, 1]).float()
+                # shape: (1, n_points_sd_padded, n_subdomains, 1)
+        input_sd_grid = input_sd_grid.transpose((0, 1, 2, 3, 5, 4))
+        # print(input_u_sd_mask.shape, input_point_cloud_sd.shape)
+                # shape: (n_total, s2, s1, s3, n_subdomains, output_dim)
 
-        train_a_sd_grid = input_sd_grid.\
-                reshape(batch_size, grid_shape[1], 
-                    grid_shape[0], grid_shape[2], -1).cuda()
+        train_a_sd_grid = input_sd_grid
+        #         reshape(batch_size, grid_shape[1], 
+        #             grid_shape[0], grid_shape[2], -1)
 
-        case_params = case_params[:, 0, :].reshape(batch_size, 1, 1, 1, -1).repeat([1, grid_shape[1], grid_shape[0], grid_shape[2], 1])
-        return train_a_sd_grid, case_params, bbox_sd, grid_shape, indices_sd, max_n_points_sd, order_sd, xyz, xyz_sd
+        # case_params = case_params[:, 0, :].reshape(batch_size, 1, 1, 1, -1).repeat([1, grid_shape[1], grid_shape[0], grid_shape[2], 1])
+        return train_a_sd_grid, xyz_sd, input_u_sd_mask, input_point_cloud_sd, tree
 
 # 单例模式， 只生成一次KD_tree
 data_preprocessing = NUNO_Data_utils()._data_preprocessing
@@ -263,13 +265,16 @@ class NUFNO3d(nn.Module):
         self.w3 = nn.Conv3d(self.width, self.width, 1)
         self.q = MLP(self.width, self.outputs_channel*n_subdomains, self.width * 4) # output channel is 3: (u, v, w)
 
-    def forward(self, x, case_params, mask, grid):
+    def forward(self, x, case_params, mask, grid, aux_data):
+        if aux_data.numel() > 0:
+            x = aux_data
         grid_samp = grid
-        output = torch.zeros_like(x)
         batch_size = x.shape[0]
-        x, case_params, bbox_sd, grid_shape, indices_sd, max_n_points_sd, order_sd, xyz, xyz_sd = self.data_interp(x, case_params, mask, grid)
+        x = x.reshape(list(x.shape[:-2])+[-1])
+        # x, case_params, bbox_sd, grid_shape, indices_sd, max_n_points_sd, order_sd, xyz, xyz_sd = self.data_interp(x, case_params, mask, grid)
         grid = self.get_grid(x.shape, x.device)
-        # print(x.shape)
+        s1, s2, s3 = grid.shape[1], grid.shape[2], grid.shape[3]
+        # print(x.shape, grid.shape, case_params.shape)
         x = torch.cat((x, grid, case_params), dim=-1)
         x = self.p(x)
         x = x.permute(0, 4, 1, 2, 3)
@@ -302,163 +307,166 @@ class NUFNO3d(nn.Module):
         x = self.q(x)
         x = x.permute(0, 2, 3, 4, 1) # pad the domain if input is non-periodic
 
-        out = x.reshape(batch_size, 
-                grid_shape[1], grid_shape[0], 
-                grid_shape[2], self.outputs_channel, self.n_subdomains)
+        x = x.reshape(batch_size, 
+                s1, s2, s3, self.n_subdomains, self.outputs_channel)
         # out = out.cpu().detach().numpy()
 
         # Interpolation (from grids to point cloud)
-        out = out.permute(0, 5, 4, 1, 2, 3)\
+        out = x.permute(0, 4, 5, 1, 2, 3)\
             .reshape(-1, self.outputs_channel, 
-                grid_shape[1], grid_shape[0], grid_shape[2])
+                s1, s2, s3)
             # Output shape: (batch * n_subdomains, output_dim
             #   s2, s1, s3)
-        u = F.grid_sample(input=out, grid=xyz_sd, 
+
+        
+        u = F.grid_sample(input=out, grid=grid_samp.reshape(batch_size*self.n_subdomains, -1, 1, 1, 3), 
             padding_mode='border', align_corners=False)
             # Output shape: (batch * n_subdomains, output_dim, 
             #   n_points_sd_padded, 1, 1)
         out = u.squeeze(-1).squeeze(-1).permute(0, 2, 1)\
             .reshape(batch_size, self.n_subdomains, -1, self.outputs_channel)\
-            .permute(0, 2, 3, 1)
+            .permute(0, 2, 1, 3)
+        # print(out.shape)
             # Output shape: (batch_size, n_points_sd_padded, 
-            #   output_dim, n_subdomains)
+            #    n_subdomains, output_dim)
 
-        for i in range(self.n_subdomains):
-            for j in range(len(indices_sd[i])):
-                output[:, indices_sd[i][j], :] = out[:, j, :, i]
-        return output
+        # for i in range(self.n_subdomains):
+        #     for j in range(len(indices_sd[i])):
+        #         output[:, indices_sd[i][j], :] = out[:, j, :, i]
+        return out, x
 
-    def data_interp(self, x, case_params, mask, grid):
-        with torch.no_grad():
-            n_subdomains = self.n_subdomains
-            oversamp_ratio = 1.0
-            xyz = grid[0].cpu().numpy()                 # shape: (19517, 3)
-            input_point_cloud = x.detach().cpu().numpy()     # shape: (1000, 19517, 5)
-            batch_size = x.shape[0]
-            # T = batch_size
+    # def data_interp(self, x, case_params, mask, grid):
+    #     with torch.no_grad():
+    #         n_subdomains = self.n_subdomains
+    #         oversamp_ratio = 1.0
+    #         xyz = grid[0].cpu().numpy()                 # shape: (19517, 3)
+    #         input_point_cloud = x.detach().cpu().numpy()     # shape: (1000, 19517, 5)
+    #         batch_size = x.shape[0]
+    #         # T = batch_size
 
-            # print("Start KD-Tree splitting...")
-            # t1 = default_timer()
-            point_cloud = xyz.tolist()
-            # Use kd-tree to generate subdomain division
-            tree= KDTree(
-                point_cloud, dim=3, n_subdomains=n_subdomains, 
-                n_blocks=8, return_indices=True
-            )
-            tree.solve()
-            # Gather subdomain info
-            bbox_sd = tree.get_subdomain_bounding_boxes()
-            indices_sd = tree.get_subdomain_indices()
-            # Pad the point cloud of each subdomain to the same size
-            max_n_points_sd = np.max([len(indices_sd[i]) 
-                for i in range(n_subdomains)])
-            xyz_sd = np.zeros((1, max_n_points_sd, n_subdomains, 3))
-            input_point_cloud_sd = np.zeros((batch_size, 
-                max_n_points_sd, input_point_cloud.shape[-1], n_subdomains))
-            # Mask is used to ignore padded zeros when calculating errors
-            input_u_sd_mask = np.zeros((1, max_n_points_sd, 1, n_subdomains))
-            # The maximum grid shape of subdomains
-            grid_shape = [-1] * 3
-                # (s1, s2, s3)
-            # The new coordinate order of each subdomain
-            # (after long side alignment)
-            order_sd = []
-            for i in range(n_subdomains):
-                # Normalize to [-1, 1]
-                _xyz = xyz[indices_sd[i], :]
-                _min, _max = np.min(_xyz, axis=0, keepdims=True), \
-                    np.max(_xyz, axis=0, keepdims=True)
-                _xyz = (_xyz - _min) / (_max - _min) * 2 - 1
-                # Long side alignment
-                bbox = bbox_sd[i]
-                scales = [bbox[j][1] - bbox[j][0] for j in range(3)]
-                order = np.argsort(scales)
-                _xyz = _xyz[:, order]
-                order_sd.append(order.tolist())
-                # Calculate the grid shape
-                _grid_shape = cal_grid_shape(
-                    oversamp_ratio * len(indices_sd[i]), scales)
-                _grid_shape.sort()
-                grid_shape = np.maximum(grid_shape, _grid_shape)
-                # Applying
-                xyz_sd[0, :len(indices_sd[i]), i, :] = _xyz
-                input_point_cloud_sd[:, :len(indices_sd[i]), :, i] = \
-                    input_point_cloud[:, indices_sd[i], :]
-                input_u_sd_mask[0, :len(indices_sd[i]), 0, i] = 1.
-            # print(grid_shape)
-            grid_shape = np.array(grid_shape)
-            # t2 = default_timer()
-            # print("Finish KD-Tree splitting, time elapsed: {:.1f}s".format(t2-t1))
+    #         # print("Start KD-Tree splitting...")
+    #         # t1 = default_timer()
+    #         point_cloud = xyz.tolist()
+    #         # Use kd-tree to generate subdomain division
+    #         tree= KDTree(
+    #             point_cloud, dim=3, n_subdomains=n_subdomains, 
+    #             n_blocks=8, return_indices=True
+    #         )
+    #         tree.solve()
+    #         # Gather subdomain info
+    #         bbox_sd = tree.get_subdomain_bounding_boxes()
+    #         indices_sd = tree.get_subdomain_indices()
+    #         # Pad the point cloud of each subdomain to the same size
+    #         max_n_points_sd = np.max([len(indices_sd[i]) 
+    #             for i in range(n_subdomains)])
+    #         xyz_sd = np.zeros((1, max_n_points_sd, n_subdomains, 3))
+    #         input_point_cloud_sd = np.zeros((batch_size, 
+    #             max_n_points_sd, input_point_cloud.shape[-1], n_subdomains))
+    #         # Mask is used to ignore padded zeros when calculating errors
+    #         input_u_sd_mask = np.zeros((1, max_n_points_sd, 1, n_subdomains))
+    #         # The maximum grid shape of subdomains
+    #         grid_shape = [-1] * 3
+    #             # (s1, s2, s3)
+    #         # The new coordinate order of each subdomain
+    #         # (after long side alignment)
+    #         order_sd = []
+    #         for i in range(n_subdomains):
+    #             # Normalize to [-1, 1]
+    #             _xyz = xyz[indices_sd[i], :]
+    #             _min, _max = np.min(_xyz, axis=0, keepdims=True), \
+    #                 np.max(_xyz, axis=0, keepdims=True)
+    #             _xyz = (_xyz - _min) / (_max - _min) * 2 - 1
+    #             # Long side alignment
+    #             bbox = bbox_sd[i]
+    #             scales = [bbox[j][1] - bbox[j][0] for j in range(3)]
+    #             order = np.argsort(scales)
+    #             _xyz = _xyz[:, order]
+    #             order_sd.append(order.tolist())
+    #             # Calculate the grid shape
+    #             _grid_shape = cal_grid_shape(
+    #                 oversamp_ratio * len(indices_sd[i]), scales)
+    #             _grid_shape.sort()
+    #             grid_shape = np.maximum(grid_shape, _grid_shape)
+    #             # Applying
+    #             xyz_sd[0, :len(indices_sd[i]), i, :] = _xyz
+    #             input_point_cloud_sd[:, :len(indices_sd[i]), :, i] = \
+    #                 input_point_cloud[:, indices_sd[i], :]
+    #             input_u_sd_mask[0, :len(indices_sd[i]), 0, i] = 1.
+    #         # print(grid_shape)
+    #         grid_shape = np.array(grid_shape)
+    #         # t2 = default_timer()
+    #         # print("Finish KD-Tree splitting, time elapsed: {:.1f}s".format(t2-t1))
 
-            # Interpolation from point cloud to uniform grid
-            # t1 = default_timer()
-            print("Start interpolation...")
-            input_sd_grid = []
-            point_cloud = xyz
-            point_cloud_val = np.transpose(input_point_cloud, (1, 2, 0)) 
-            interp_linear = LinearNDInterpolator(point_cloud, point_cloud_val)
-            interp_nearest = NearestNDInterpolator(point_cloud, point_cloud_val)
-            for i in range(n_subdomains):
-                bbox = bbox_sd[i]
-                _grid_shape = grid_shape[np.argsort(order_sd[i])]
-                # print(_grid_shape)
-                # Linear interpolation
-                grid_x = np.linspace(bbox[0][0], bbox[0][1], 
-                    num=_grid_shape[0])
-                grid_y = np.linspace(bbox[1][0], bbox[1][1], 
-                    num=_grid_shape[1])
-                grid_z = np.linspace(bbox[2][0], bbox[2][1], 
-                    num=_grid_shape[2])
-                grid_x, grid_y, grid_z = np.meshgrid(
-                    grid_x, grid_y, grid_z, indexing='ij')
-                grid_val = interp_linear(grid_x, grid_y, grid_z)
-                # Fill nan values
-                nan_indices = np.isnan(grid_val)[..., 0, 0]
-                fill_vals = interp_nearest(
-                    np.stack((
-                        grid_x[nan_indices], grid_y[nan_indices],
-                        grid_z[nan_indices]), axis=1))
-                grid_val[nan_indices] = fill_vals
-                # Long size alignment
-                grid_val = np.transpose(grid_val, 
-                    order_sd[i] + [3, 4])
-                input_sd_grid.append(np.transpose(grid_val, (4, 0, 1, 2, 3)))
-            # Convert indexing to 'xy'
-            input_sd_grid = np.transpose(
-                np.array(input_sd_grid), (1, 3, 2, 4, 5, 0))
-            # print(input_sd_grid.shape)
+    #         # Interpolation from point cloud to uniform grid
+    #         # t1 = default_timer()
+    #         print("Start interpolation...")
+    #         input_sd_grid = []
+    #         point_cloud = xyz
+    #         point_cloud_val = np.transpose(input_point_cloud, (1, 2, 0)) 
+    #         interp_linear = LinearNDInterpolator(point_cloud, point_cloud_val)
+    #         interp_nearest = NearestNDInterpolator(point_cloud, point_cloud_val)
+    #         for i in range(n_subdomains):
+    #             bbox = bbox_sd[i]
+    #             _grid_shape = grid_shape[np.argsort(order_sd[i])]
+    #             # print(_grid_shape)
+    #             # Linear interpolation
+    #             grid_x = np.linspace(bbox[0][0], bbox[0][1], 
+    #                 num=_grid_shape[0])
+    #             grid_y = np.linspace(bbox[1][0], bbox[1][1], 
+    #                 num=_grid_shape[1])
+    #             grid_z = np.linspace(bbox[2][0], bbox[2][1], 
+    #                 num=_grid_shape[2])
+    #             grid_x, grid_y, grid_z = np.meshgrid(
+    #                 grid_x, grid_y, grid_z, indexing='ij')
+    #             grid_val = interp_linear(grid_x, grid_y, grid_z)
+    #             # Fill nan values
+    #             nan_indices = np.isnan(grid_val)[..., 0, 0]
+    #             fill_vals = interp_nearest(
+    #                 np.stack((
+    #                     grid_x[nan_indices], grid_y[nan_indices],
+    #                     grid_z[nan_indices]), axis=1))
+    #             grid_val[nan_indices] = fill_vals
+    #             # Long size alignment
+    #             grid_val = np.transpose(grid_val, 
+    #                 order_sd[i] + [3, 4])
+    #             input_sd_grid.append(np.transpose(grid_val, (4, 0, 1, 2, 3)))
+    #         # Convert indexing to 'xy'
+    #         input_sd_grid = np.transpose(
+    #             np.array(input_sd_grid), (1, 3, 2, 4, 5, 0))
+    #         # print(input_sd_grid.shape)
 
-            # t2 = default_timer()
-            # print("Finish interpolation, time elapsed: {:.1f}s".format(t2-t1))
+    #         # t2 = default_timer()
+    #         # print("Finish interpolation, time elapsed: {:.1f}s".format(t2-t1))
 
-        xyz_sd = torch.from_numpy(xyz_sd).cuda().float()
-        xyz_sd = xyz_sd.repeat([batch_size, 1, 1, 1])\
-                .permute(0, 2, 1, 3)\
-                .reshape(batch_size*n_subdomains, -1, 1, 1, 3)
-                # shape: (batch * n_subdomains, n_points_sd_padded, 1, 1, 3)
-        input_point_cloud_sd = torch.from_numpy(input_point_cloud_sd).float()
-                # shape: (ntotal, n_points_sd_padded, output_dim, n_subdomains)
-        input_u_sd_mask = torch.from_numpy(input_u_sd_mask).cuda().float()
-                # shape: (1, n_points_sd_padded, 1, n_subdomains)
-        input_sd_grid = torch.from_numpy(input_sd_grid).float()
-                # shape: (n_total, s2, s1, s3, input_dim + output_dim, n_subdomains)
+    #     xyz_sd = torch.from_numpy(xyz_sd).cuda().float()
+    #     xyz_sd = xyz_sd.repeat([batch_size, 1, 1, 1])\
+    #             .permute(0, 2, 1, 3)\
+    #             .reshape(batch_size*n_subdomains, -1, 1, 1, 3)
+    #             # shape: (batch * n_subdomains, n_points_sd_padded, 1, 1, 3)
+    #     input_point_cloud_sd = torch.from_numpy(input_point_cloud_sd).float()
+    #             # shape: (ntotal, n_points_sd_padded, output_dim, n_subdomains)
+    #     input_u_sd_mask = torch.from_numpy(input_u_sd_mask).cuda().float()
+    #             # shape: (1, n_points_sd_padded, 1, n_subdomains)
+    #     input_sd_grid = torch.from_numpy(input_sd_grid).float()
+    #             # shape: (n_total, s2, s1, s3, input_dim + output_dim, n_subdomains)
 
-        train_a_sd_grid = input_sd_grid.\
-                reshape(batch_size, grid_shape[1], 
-                    grid_shape[0], grid_shape[2], -1).cuda()
+    #     train_a_sd_grid = input_sd_grid.\
+    #             reshape(batch_size, grid_shape[1], 
+    #                 grid_shape[0], grid_shape[2], -1).cuda()
 
-        case_params = case_params[:, 0, :].reshape(batch_size, 1, 1, 1, -1).repeat([1, grid_shape[1], grid_shape[0], grid_shape[2], 1])
-        return train_a_sd_grid, case_params, bbox_sd, grid_shape, indices_sd, max_n_points_sd, order_sd, xyz, xyz_sd
+    #     case_params = case_params[:, 0, :].reshape(batch_size, 1, 1, 1, -1).repeat([1, grid_shape[1], grid_shape[0], grid_shape[2], 1])
+    #     return train_a_sd_grid, case_params, bbox_sd, grid_shape, indices_sd, max_n_points_sd, order_sd, xyz, xyz_sd
         
 
-    def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
+    def one_forward_step(self, x, case_params, mask,  grid, y, aux_data = torch.tensor(()), loss_fn=None, args= None):
         info = {}
-        pred = self(x, case_params, mask, grid)
+        
+        pred , x_next = self(x, case_params, mask, grid, aux_data)
         
         if loss_fn is not None:
             ## defined your specific loss calculations here
             loss = loss_fn(pred, y)
-            return loss, pred, info
+            return loss, pred, x_next, info
         else:
             #TODO: default loss_fn
             pass

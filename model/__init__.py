@@ -6,4 +6,4 @@ from .uno.uno import *
 from .kno import *
 from .unet import *
 from .auto_deeponet import AutoDeepONet,AutoDeepONet_3d
-from .nufno3d import NUFNO3d
+from .NUNO.nufno3d import NUFNO3d

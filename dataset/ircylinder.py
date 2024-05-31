@@ -321,12 +321,158 @@ class IRCylinderDataset_NUNO(Dataset):
                         grid = np.array(data['grid'][::reduced_resolution], np.float32)
                         grid[:,0] = grid[:,0] - self.statistics['pos_x_min']
                         grid[:,1] = grid[:,1] - self.statistics['pos_y_min']
-                        self.grids.append(grid)
+                        # self.grids.append(grid)
                         ### mask
                         mask = np.ones_like(u)
                         mask = torch.tensor(mask).float()
             
                         case_features = np.stack((u, v, p), axis=-1) # (T, nx, 3)
+
+
+                        n_total = 1
+                        n_subdomains = 6
+                        oversamp_ratio = 1.5
+                        input_xy = grid
+                        T = case_features.shape[0]
+                        input_u = case_features.reshape(1, T, -1, 3).transpose((0, 2, 1, 3))
+                        point_cloud = grid.tolist()
+                        # t1 = default_timer()
+                        point_cloud = input_xy.tolist()
+                        # Use kd-tree to generate subdomain division
+                        tree= KDTree(
+                            point_cloud, dim=2, n_subdomains=n_subdomains, 
+                            n_blocks=8, return_indices=True
+                        )
+                        tree.solve()
+                        # Gather subdomain info
+                        bbox_sd = tree.get_subdomain_bounding_boxes()
+                        indices_sd = tree.get_subdomain_indices()
+                        input_xy_sd = np.zeros((np.max([len(indices_sd[i]) 
+                            for i in range(n_subdomains)]), n_subdomains, 2))
+                        for i in range(n_subdomains):
+                            # Normalize to [-1, 1]
+                            xy = input_xy[indices_sd[i], :]
+                            _min, _max = np.min(xy, axis=0, keepdims=True), \
+                                np.max(xy, axis=0, keepdims=True)
+                            xy = (xy - _min) / (_max - _min) * 2 - 1
+                            # Long side alignment
+                            bbox = bbox_sd[i]
+                            if bbox[0][1] - bbox[0][0] < bbox[1][1] - bbox[1][0]:
+                                xy = np.flip(xy, axis=1)
+                            input_xy_sd[:len(indices_sd[i]), i, :] = xy
+                        # t2 = default_timer()
+                        # print("Finish KD-Tree splitting, time elapsed: {:.1f}s".format(t2-t1))
+
+                        # if False:
+                        #     input_u_sd_grid = np.load(PATH_U_SD_G)   
+                        #         # shape: (1200, s1_padded, s2_padded, 31, 3, n_subdomains) 
+                        #     input_u_sd = np.load(PATH_U_SD)          
+                        #         # shape: (1200, n_points_sd_padded, 31, 3, n_subdomains) 
+                        #     input_u_sd_mask = np.load(PATH_U_SD_M)   
+                        #         # shape: (1, n_points_sd_padded, 1, 1, n_subdomains) 
+                        # else:
+                        # t1 = default_timer()
+                        # print("Start interpolation...")
+                        # Calculate the padded grid size
+                        max_grid_size_x, max_grid_size_y = -1, -1
+                        grid_sizes = []
+                        is_transposed = [False] * n_subdomains
+                        for i in range(n_subdomains):
+                            n_points = len(indices_sd[i])
+                            bbox = bbox_sd[i]
+                            # Calculate the grid size, where the aspect ratio of the discrete grid 
+                            # remains the same as the that of the original subdomain (bbox)
+                            grid_size_x = np.sqrt(n_points * oversamp_ratio * \
+                                (bbox[0][1] - bbox[0][0]) / (bbox[1][1] - bbox[1][0]))
+                            grid_size_y = grid_size_x * (bbox[1][1] - bbox[1][0]) / (bbox[0][1] - bbox[0][0])
+                            grid_size_x, grid_size_y = max(int(np.round(grid_size_x)), 2), \
+                                max(int(np.round(grid_size_y)), 2)
+                            grid_sizes.append((grid_size_x, grid_size_y))
+                            # Long side alignment to reduce paddings
+                            if bbox[0][1] - bbox[0][0] < bbox[1][1] - bbox[1][0]:
+                                grid_size_x, grid_size_y = grid_size_y, grid_size_x
+                                is_transposed[i] = True
+                            max_grid_size_x, max_grid_size_y = max(max_grid_size_x, 
+                                grid_size_x), max(max_grid_size_y, grid_size_y)
+
+                        # Interpolation from point cloud to uniform grid
+                        input_u_sd_grid = []
+                        point_cloud = input_xy
+                        point_cloud_val = np.transpose(input_u, (1, 2, 3, 0)) 
+                        interp_linear = LinearNDInterpolator(point_cloud, point_cloud_val)
+                        interp_rbf = RBFInterpolator(point_cloud, point_cloud_val, neighbors=6)
+                        for i in range(n_subdomains):
+                            grid_size_x, grid_size_y = grid_sizes[i]
+                            bbox = bbox_sd[i]
+                            # Linear interpolation
+                            grid_x = np.linspace(bbox[0][0], bbox[0][1], num=grid_size_x)
+                            grid_y = np.linspace(bbox[1][0], bbox[1][1], num=grid_size_y)
+                            grid_x, grid_y = np.meshgrid(grid_x, grid_y)
+                            grid_val = interp_linear(grid_x, grid_y)
+                            # Fill nan values
+                            nan_indices = np.isnan(grid_val)[..., 0, 0, 0]
+                            fill_vals = interp_rbf(np.stack((grid_x[nan_indices], grid_y[nan_indices]), axis=1))
+                            grid_val[nan_indices] = fill_vals
+                            # Resize to the same size via FFT-IFFT
+                            freq = np.fft.rfft2(grid_val, axes=(0, 1))
+                            s1_padded, s2_padded = max_grid_size_y, max_grid_size_x 
+                            if is_transposed[i]:
+                                s1_padded, s2_padded = s2_padded, s1_padded
+                            square_freq = np.zeros((s1_padded, 
+                                s2_padded // 2 + 1, T, 3, n_total)) + 0j
+                            square_freq[:min(s1_padded//2, freq.shape[0]//2), 
+                                    :min(s2_padded//2+1, freq.shape[1]//2+1), ...] = \
+                                freq[:min(s1_padded//2, freq.shape[0]//2), 
+                                    :min(s2_padded//2+1, freq.shape[1]//2+1), ...]
+                            square_freq[-min(s1_padded//2, freq.shape[0]//2):, 
+                                    :min(s2_padded//2+1, freq.shape[1]//2+1), ...] = \
+                                freq[-min(s1_padded//2, freq.shape[0]//2):,
+                                    :min(s2_padded//2+1, freq.shape[1]//2+1), ...]
+                            grid_val = np.fft.irfft2(square_freq, 
+                                s=(s1_padded, s2_padded), axes=(0, 1))
+                            if is_transposed[i]:
+                                grid_val = np.transpose(grid_val, (1, 0, 2, 3, 4))
+                            input_u_sd_grid.append(np.transpose(grid_val, (4, 0, 1, 2, 3)))
+                        input_u_sd_grid = np.transpose(np.array(input_u_sd_grid), (1, 2, 3, 4, 5, 0))
+
+                        # Pad the point-cloud values of each subdomain to the same size
+                        # Mask is used to ignore padded zeros when calculating errors
+                        input_u_sd = np.zeros((n_total, 
+                            np.max([len(indices_sd[i]) for i in range(n_subdomains)]), T, 3, n_subdomains))
+                        input_u_sd_mask = np.zeros((1, 
+                            np.max([len(indices_sd[i]) for i in range(n_subdomains)]), 1, 1, n_subdomains))
+                        for i in range(n_subdomains):
+                            input_u_sd[:, :len(indices_sd[i]), ..., i] = input_u[:, indices_sd[i], ...]
+                            input_u_sd_mask[:, :len(indices_sd[i]), ..., i] = 1.
+                        # print(input_u_sd.shape)
+                            # if SAVE_PREP:
+                            #     np.save(PATH_U_SD_G, input_u_sd_grid)
+                            #     np.save(PATH_U_SD, input_u_sd) 
+                            #     np.save(PATH_U_SD_M, input_u_sd_mask)
+                            # t2 = default_timer()
+                            # print("Finish interpolation, time elapsed: {:.1f}s".format(t2-t1))
+
+                        input_xy_sd = torch.from_numpy(input_xy_sd).float()
+                        # input_xy_sd = input_xy_sd.unsqueeze(0) # .repeat([batch_size, 1, 1, 1])\
+                            # .permute(0, 2, 1, 3)\
+                            # .reshape(batch_size * n_subdomains, -1, 1, 2)
+
+                            # shape: (batch * n_subdomains, n_points_sd_padded, 1, 2)
+                        self.input_xy_sd.append(input_xy_sd)
+
+                        s1_padded, s2_padded = input_u_sd_grid.shape[1:3]
+                        n_grid = s1_padded*s2_padded
+                        input_u_sd_grid = input_u_sd_grid.reshape(s1_padded, s2_padded, T, -1).transpose((2, 0, 1, 3))
+                        input_u_sd = input_u_sd.reshape(-1, T, 3, n_subdomains).transpose((1, 0, 3, 2))
+                        input_u_sd_mask = torch.from_numpy(input_u_sd_mask.reshape(-1, 1, n_subdomains)).float()
+                        grid = input_xy_sd
+                        case_features = input_u_sd
+                        mask = input_u_sd_mask.repeat([T, 1, 3, 1]).reshape(T, -1, 3,n_subdomains).transpose(0, 1, 3, 2)
+                        # print(mask.shape, case_features.shape)
+                        self.grids.append(grid)
+
+
+
                         inputs = case_features[:-self.time_step_size]  # (T, nx, 3)
                         outputs = case_features[self.time_step_size:]  # (T, nx, 3)
                         assert len(inputs) == len(outputs)

@@ -26,10 +26,10 @@ dataset:
   multi_step_size: 3
 # dataloader相关参数
 dataloader:
-  train_batch_size: 80
-  val_batch_size: 80
+  train_batch_size: 40
+  val_batch_size: 40
   test_batch_size: 1
-  num_workers: 4
+  num_workers: 2
   pin_memory: False
 # 模型相关参数
 model:

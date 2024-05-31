@@ -205,7 +205,7 @@ class IRHillsDataset(Dataset):
         case_params = self.case_params[case_id] # (nx, p)
         grid = self.grids[case_id]              # (nx, 3)
         # print(inputs.shape, label.shape, mask.shape, case_params.shape, grid.shape, case_id)
-        aux_data = None
+        aux_data = torch.tensor(())
         return inputs, label, mask, case_params, grid, case_id, aux_data
 
 
@@ -278,6 +278,7 @@ class IRHillsDataset_NUNO(Dataset):
         self.statistics['z_len'] = self.statistics['pos_z_max'] - self.statistics['pos_z_min']
 
         cnt = 0 # for reduced batch
+        tree = None
 
         root_path = os.path.join(saved_folder, filename)
         with h5py.File(root_path, 'r') as f:
@@ -323,14 +324,19 @@ class IRHillsDataset_NUNO(Dataset):
                         grid[:,0] = grid[:,0] / self.statistics['pos_x_max']
                         grid[:,1] = grid[:,1] / self.statistics['pos_y_max']
                         grid[:,2] = grid[:,2] / self.statistics['pos_z_max']
-                        self.grids.append(grid)
+                        
                         ### mask
                         mask = np.ones_like(u)
                         mask = torch.from_numpy(mask).float()
             
                         case_features = np.stack((u, v, w, p), axis=-1) # (T, nx, 4)
-                        inputs = case_features[:-self.time_step_size]  # (T, nx, 4)
-                        outputs = case_features[self.time_step_size:]  # (T, nx, 4)
+
+                        from model.NUNO.nufno3d import data_preprocessing
+                        case_features, grid, mask, features_cloud, tree = data_preprocessing(case_features, grid, tree, n_subdomains = 8)
+
+                        self.grids.append(grid)
+                        inputs = case_features[:-self.time_step_size]  # (T, s1, s2, s3, n_sd, 4)
+                        outputs = features_cloud[self.time_step_size:]  # (T, n_points_max, n_sd, 4)
                         assert len(inputs) == len(outputs)
 
                         num_steps = len(inputs)
@@ -344,7 +350,7 @@ class IRHillsDataset_NUNO(Dataset):
                                 #######################################################
                                 #mask
                                 #If each frame has a different mask, it needs to be rewritten 
-                                self.masks.append(mask[i+1-multi_step_size:i+1, ...].unsqueeze(-1))
+                                self.masks.append(mask[i+1-multi_step_size:i+1, ...])
                         #norm props
                         if norm_props:
                             self.normalize_physics_props(this_case_params)
@@ -363,6 +369,7 @@ class IRHillsDataset_NUNO(Dataset):
         self.labels = torch.stack(self.labels).float() #(Total frames, multi_step, nx, 4)
         self.case_ids = np.array(self.case_ids) #(Total frames)
         self.masks = torch.stack(self.masks).float() #(Total frames, nx, 1)
+        # print(self.labels.shape, self.masks.shape)
         self.grids = torch.from_numpy(np.stack(self.grids)).float()
 
         if self.multi_step_size==1:
@@ -373,9 +380,9 @@ class IRHillsDataset_NUNO(Dataset):
             #process the parameters shape
             self.case_params = torch.stack(self.case_params).float() #(cases, p)
             cases, p = self.case_params.shape
-            _, nx, _ = self.inputs.shape
-            self.case_params = self.case_params.reshape(cases, 1, p)
-            self.case_params = self.case_params.repeat(1, nx, 1) #(cases, nx, p)
+            _, s1, s2, s3, _, _ = self.inputs.shape
+            self.case_params = self.case_params.reshape(cases, 1, 1, 1,  p)
+            self.case_params = self.case_params.repeat(1, s1, s2, s3, 1) #(cases, nx, p)
         else:
             self.case_params = torch.stack(self.case_params).float()
         
@@ -390,7 +397,7 @@ class IRHillsDataset_NUNO(Dataset):
         self.masks = self.masks[:num_samples_max, ...]
 
         # data prepossing for NUNO， get inputs_sd, labels_sd, mask_sd, cases_sd, grid_sd, inputs_sd_grid
-        from ..model.NUNO.nufno3d import data_preprocessing
+        
         # inputs_sd (N_total, max_Np, 8, C)
         # labels_sd (N_total, multi_step, max_Np, 8, C) or (N_total, max_Np, 8, C)
         # mask_sd (N_total, multi_step, max_Np, 8, 1) or (N_total, max_Np, 8, 1)
@@ -422,5 +429,6 @@ class IRHillsDataset_NUNO(Dataset):
         case_params = self.case_params[case_id] # (nx, p)
         grid = self.grids[case_id]              # (nx, 3)
         # print(inputs.shape, label.shape, mask.shape, case_params.shape, grid.shape, case_id)
-        # return inputs, label, mask, case_params, grid, case_id
+        aux_data = torch.tensor(())
+        return inputs, label, mask, case_params, grid, case_id, aux_data
         # return inputs_sd, labels_sd, mask_sd, cases_sd, grid_sd, case_id, inputs_sd_grid
