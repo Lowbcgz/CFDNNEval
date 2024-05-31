@@ -1,5 +1,5 @@
-flow_name: 'hills'
-model_name: "KNO"
+flow_name: 'cylinder'
+model_name: "OFormer"
 if_training: True
 continue_training: False
 model_path: null
@@ -7,46 +7,46 @@ saved_dir: "./checkpoint/"
 output_dir: "./output/"
 save_period: 10
 plot_interval: 1
+is_irregular: False
 # 训练相关参数
 seed: 0
 training_type: "autoregressive"
-epochs: 100
+epochs: 500
 # 数据集相关参数 
 dataset:
-  saved_folder: "/data1/FluidData/periodic_hills/"
-  reduced_resolution: 2
+  single_file: True
+  saved_folder: "/home/data2/FluidData/cylinder_NEW/cylinder_reduced/"
+  reduced_resolution: 1
   reduced_batch: 1
   data_delta_time: 0.1
   delta_time: 0.1 
   stable_state_diff: 0.001
   norm_props: True
   norm_bc: True  
-  case_name: 'rRE'
+  case_name: 'rRE_rBC'
   multi_step_size: 3
 # dataloader相关参数
 dataloader:
   train_batch_size: 32
-  val_batch_size: 16
+  val_batch_size: 32
   test_batch_size: 1
-  num_workers: 4
+  num_workers: 1
   pin_memory: False
 # 模型相关参数
 model:
-  in_channels: 4
-  out_channels: 4
-  autoencoder: 'Conv'
-  width: 32
-  modes_x: 8
-  modes_y: 8
-  modes_z: 8
-  decompose: 8
+  x_dim: 2
+  inputs_channel: 3
+  outputs_channel: 3
 # 优化器相关参数
 optimizer:
-  name: 'Adam'
-  lr: 1.e-4
-  weight_decay: 1.e-8
+  name: 'AdamW'
+  lr: 6.e-4
+  weight_decay: 1.e-4
 # scheduler相关参数
 scheduler:
-  name: "StepLR"
-  step_size: 20
-  gamma: 0.9
+  name: "OneCycleLR"
+  max_lr: 6.e-4
+  total_steps: 500
+  div_factor: 1000
+  pct_start: 0.3
+  final_div_factor: 1000

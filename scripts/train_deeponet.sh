@@ -30,6 +30,7 @@ CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_NSCH_ALL.yaml -c
 
 # Darcy
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_Darcy_PDEBench.yaml -c PDEBench | tee ./log/train/DeepONet_darcy_PDEBench.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_Darcy_darcy.yaml -c darcy | tee ./log/train/DeepONet_darcy_darcy.out
 
 # cylinder / ircylinder
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_ircylinder_irRE_irBC.yaml -c irRE | tee ./log/train/DeepONet_ircylinder_irRE.out

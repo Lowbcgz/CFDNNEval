@@ -207,6 +207,9 @@ class TubeDataset(Dataset):
         """
         case_params['vel_in'] = (case_params['vel_in'] - 1.4371428489685059) / 1.0663825273513794
     
+    def apply_norm(self, channel_min, channel_max):
+        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
+        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
     def __len__(self):
         return len(self.inputs)
 

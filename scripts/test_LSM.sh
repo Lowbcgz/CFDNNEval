@@ -30,6 +30,7 @@ CUDA_VISIBLE_DEVICES=7 python train.py ./config/LSM/config_NSCH_ALL.yaml -c phi_
 
 # Darcy
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_Darcy_PDEBench.yaml -c PDEBench --test | tee ./log/test/LSM_darcy_PDEBench.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_Darcy_darcy.yaml -c darcy --test | tee ./log/test/LSM_darcy_darcy.out
 
 # cylinder / ircylinder
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_ircylinder_irRE_irBC.yaml -c irRE --test | tee ./log/test/LSM_ircylinder_irRE.out
@@ -37,3 +38,6 @@ CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_ircylinder_irRE_irBC.
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cylinder_rRE_rBC.yaml -c rRE_rBC --test | tee ./log/test/LSM_cylinder_rRE_rBC.out
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cylinder_rRE_rBC.yaml -c rRE --test | tee ./log/test/LSM_cylinder_rRE.out
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cylinder_rRE_rBC.yaml -c rBC --test | tee ./log/test/LSM_cylinder_rBC.out
+
+# periodic hills
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_hills_rRE.yaml -c rRE --test | tee ./log/test/LSM_hills_rRE.out

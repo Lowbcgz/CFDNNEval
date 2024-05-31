@@ -7,3 +7,5 @@ from .kno import *
 from .unet import *
 from .auto_deeponet import AutoDeepONet,AutoDeepONet_3d
 from .NUNO.nufno3d import NUFNO3d
+from .geofno import geoFNO2d
+from .oformer.oformer import Oformer

@@ -199,6 +199,10 @@ class IRCylinderDataset(Dataset):
         """
         case_params['vel_top'] = (case_params['vel_top'] - 18.366547) / 16.31889
     
+    def apply_norm(self, channel_min, channel_max):
+        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
+        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
+
     def __len__(self):
         return len(self.inputs)
 

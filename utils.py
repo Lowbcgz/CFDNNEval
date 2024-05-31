@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import random
-from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, KNO2d, UNet2d, LSM_2d_ir, NUFNO3d
+from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, KNO2d, UNet2d, LSM_2d_ir, geoFNO2d, Oformer, NUFNO3d
 from dataset import *
 import os
 import shutil
@@ -305,42 +305,25 @@ def get_dataset(args):
         else:
             test_ms_data = None
     elif args['flow_name'] == 'Darcy':
-        if dataset_args["case_name"] == "PDEBench":
-            train_data = PDEDarcyDataset(split="train",
-                                         saved_folder= dataset_args["saved_folder"], 
-                                         reduced_batch=dataset_args["reduced_batch"],
-                                        reduced_resolution=dataset_args["reduced_resolution"],
-                                        reshape_parameters=dataset_args.get('reshape_parameters', True))
-            val_data = PDEDarcyDataset(split="val", saved_folder= dataset_args["saved_folder"], 
-                                         reduced_batch=dataset_args["reduced_batch"],
-                                        reduced_resolution=dataset_args["reduced_resolution"],
-                                        reshape_parameters=dataset_args.get('reshape_parameters', True))
-            test_data = PDEDarcyDataset(split="test", saved_folder= dataset_args["saved_folder"], 
-                                         reduced_batch=dataset_args["reduced_batch"],
-                                        reduced_resolution=dataset_args["reduced_resolution"],
-                                        reshape_parameters=dataset_args.get('reshape_parameters', True))
-        else:
-            train_data = DarcyDataset(
-                                    filename=args['flow_name'] + '_train.hdf5',
-                                    saved_folder=dataset_args['saved_folder'],
-                                    case_name=dataset_args['case_name'],
-                                    reduced_resolution=dataset_args["reduced_resolution"],
+        filename = "2D_DarcyFlow_beta1.0_Train.hdf5" if dataset_args["case_name"] == "PDEBench" else "darcy.hdf5"
+        train_data = PDEDarcyDataset(split="train",
+                                    filename=filename,
+                                    saved_folder= dataset_args["saved_folder"], 
                                     reduced_batch=dataset_args["reduced_batch"],
-                                    )
-            val_data = DarcyDataset(
-                                    filename=args['flow_name'] + '_dev.hdf5',
-                                    saved_folder=dataset_args['saved_folder'],
-                                    case_name=dataset_args['case_name'],
                                     reduced_resolution=dataset_args["reduced_resolution"],
+                                    reshape_parameters=dataset_args.get('reshape_parameters', True))
+        val_data = PDEDarcyDataset(split="val", 
+                                    filename=filename,
+                                    saved_folder= dataset_args["saved_folder"], 
                                     reduced_batch=dataset_args["reduced_batch"],
-                                    )
-            test_data = DarcyDataset(
-                                    filename=args['flow_name'] + '_test.hdf5',
-                                    saved_folder=dataset_args['saved_folder'],
-                                    case_name=dataset_args['case_name'],
                                     reduced_resolution=dataset_args["reduced_resolution"],
+                                    reshape_parameters=dataset_args.get('reshape_parameters', True))
+        test_data = PDEDarcyDataset(split="test", 
+                                    filename=filename,
+                                    saved_folder= dataset_args["saved_folder"], 
                                     reduced_batch=dataset_args["reduced_batch"],
-                                    )
+                                    reduced_resolution=dataset_args["reduced_resolution"],
+                                    reshape_parameters=dataset_args.get('reshape_parameters', True))
         test_ms_data = None
     elif args["flow_name"] == "hills":
         train_data = HillsDataset(
@@ -517,6 +500,12 @@ def get_model(spatial_dim, n_case_params, args):
                         out_channels=model_args['out_channels'],
                         init_features=model_args['init_features'],
                         n_case_params = n_case_params)
+            elif model_name == 'OFormer':
+                model = Oformer(input_ch=model_args['inputs_channel']+n_case_params,
+                                output_ch=model_args['outputs_channel'],
+                                n_tolx=args["model"]["num_points"],
+                                multi_step_size=args["dataset"]["multi_step_size"],
+                                dim=2)
         else:
             #TODO
             pass
@@ -531,6 +520,13 @@ def get_model(spatial_dim, n_case_params, args):
                       modes1 = model_args['modes'],
                       modes2 = model_args['modes'],
                       n_case_params = n_case_params)
+            elif model_name == "geoFNO":
+                model = geoFNO2d(inputs_channel=model_args['inputs_channel'],
+                                outputs_channel=model_args['outputs_channel'],
+                        width = model_args['width'],
+                        modes1 = model_args['modes'],
+                        modes2 = model_args['modes'],
+                        n_case_params = n_case_params)
             elif model_name == "LSM":
                 if model_args["irregular_geo"]:
                     model = LSM_2d_ir(
@@ -588,6 +584,12 @@ def get_model(spatial_dim, n_case_params, args):
                         out_channels=model_args['out_channels'],
                         init_features=model_args['init_features'],
                         n_case_params = n_case_params)
+            elif model_name == 'OFormer':
+                model = Oformer(input_ch=model_args['inputs_channel']+n_case_params,
+                                output_ch=model_args['outputs_channel'],
+                                n_tolx=args["model"]["num_points"],
+                                multi_step_size=args["dataset"]["multi_step_size"],
+                                dim=2)
 
         elif spatial_dim == 3:
             if model_name == "FNO":

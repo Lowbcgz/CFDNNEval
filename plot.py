@@ -59,53 +59,47 @@ def plot_predictions(
     plt.savefig(error_dir / f"{message}.png", bbox_inches="tight", pad_inches=0)
     plt.clf()
 
-def test_plot(test_loader, model, device, output_dir, args):
+def test_plot(test_loader, model, device, fig_dir, error_dir, args):
     model.eval()
 
-    x_list = []
     gt_list = []
-    mask_list = []
-    case_params_list = []
-    grid_list = []
     pred_list = []
 
     with torch.no_grad():
         (channel_min, channel_max) = args["channel_min_max"] 
         channel_min, channel_max = channel_min.to(device), channel_max.to(device)
         prev_case_id = 0
-
+        if_init = True
+        #record frames
         for x, y, mask, case_params, grid, case_id in test_loader:
             case_id = case_id.item()
-            
-            if args["flow_name"] not in ["Darcy", "TGV"]:
-                x, y = x.to(device), y.to(device)
-                x = (x - channel_min)/(channel_max-channel_min) # normalization
-                y = (y - channel_min)/(channel_max-channel_min)
-            x_list.append(x)
-            gt_list.append(y)
-            mask_list.append(mask)
-            case_params_list.append(case_params)
-            grid_list.append(grid)
-
             if prev_case_id != case_id:
                 break
-        
-        total_frames = len(x_list)
-        print(f'total frames is {total_frames}')
-        
-        for i in range(total_frames):
-            if i == 0:
-                x = x_list[0].to(device)
+            
+            x = x.to(device)
+            y = y.to(device)
+            mask = mask.to(device)
+            case_params = case_params.to(device)
+            grid = grid.to(device)
+
+            y = y * mask
+            if args["flow_name"] not in ["Darcy", "TGV"]:
+                x = (x - channel_min)/(channel_max-channel_min) # normalization
+                y = (y - channel_min)/(channel_max-channel_min)
+            gt_list.append(y)
+            
+            if if_init:
+                if_init = False
             else:
                 x = pred.detach().clone()
-
-            case_params = case_params_list[i].to(device)
-            mask = mask_list[i].to(device)
-            grid = grid_list[i].to(device)
+            
             pred = model(x, case_params, mask, grid)
-
             pred_list.append(pred)
+            
+        total_frames = len(pred_list)
+        print(f'total frames is {total_frames}')
         
+        #plot
         assert len(pred_list) == len(gt_list)
         cnt = 0
         time_list = ['0', '0.25T', '0.5T', '0.75T', 'T']
@@ -114,7 +108,7 @@ def test_plot(test_loader, model, device, output_dir, args):
             gt = gt_list[i]
             time = time_list[cnt]
             for j in range(pred.shape[-1]):
-                plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(output_dir), message=f'variable{j}_at_' + time)
+                plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(fig_dir), message=f'variable{j}_at_' + time)
             cnt += 1
         
         if cnt != 5:
@@ -122,18 +116,45 @@ def test_plot(test_loader, model, device, output_dir, args):
             gt = gt_list[-1]
             time = time_list[-1]
             for j in range(pred.shape[-1]):
-                plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(output_dir), message=f'variable{j}_at_' + time)
-                        
+                plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(fig_dir), message=f'variable{j}_at_' + time)
+        
+        #get error
+        mse = []
+        nmse = []
+        max_error = []
+
+        for i in range(len(pred_list)):
+            pred = pred_list[i]
+            gt = gt_list[i]
+
+            nc = pred.shape[-1]
+            pred = pred.reshape(-1, nc).cpu().detach().numpy()
+            gt = gt.reshape(-1, nc).cpu().detach().numpy()
+
+            error = pred - gt
+            mse.append(np.mean(error ** 2, axis=0))
+            nmse.append(np.mean(error ** 2, axis=0) / np.mean(gt ** 2, axis = 0))
+            max_error.append(np.max(np.abs(error), axis=0))
+
+        np.save(os.path.join(error_dir, 'mse.npy'), np.array(mse))
+        np.save(os.path.join(error_dir, 'nmse.npy'), np.array(nmse))
+        np.save(os.path.join(error_dir, 'max_error.npy'), np.array(max_error))
+                      
 def main(args):
     #init
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     saved_dir = os.path.join(args["saved_dir"], os.path.join(args["model_name"], args["flow_name"] + '_' + args['dataset']['case_name']))
 
-    fig_dir = os.path.join(args['output_dir'], './fig')
-    output_dir = os.path.join(fig_dir, os.path.join(args["model_name"],args["flow_name"] + '_' + args['dataset']['case_name']))
+    fig_dir = os.path.join(args['output_dir'], 'fig')
+    fig_dir = os.path.join(fig_dir, os.path.join(args["model_name"],args["flow_name"] + '_' + args['dataset']['case_name']))
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    error_dir = os.path.join(args['output_dir'], 'error')
+    error_dir = os.path.join(error_dir, os.path.join(args["model_name"],args["flow_name"] + '_' + args['dataset']['case_name']))
+
+    if not os.path.exists(fig_dir):
+        os.makedirs(fig_dir)
+    if not os.path.exists(error_dir):
+        os.makedirs(error_dir)
 
     dataset_args = args["dataset"]
 
@@ -175,7 +196,7 @@ def main(args):
 
     #test and plot
     print('start ploting...')
-    test_plot(test_loader, model, device, output_dir, args)
+    test_plot(test_loader, model, device, fig_dir, error_dir, args)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

@@ -31,6 +31,7 @@ CUDA_VISIBLE_DEVICES=5 python train.py ./config/FNO/config_NSCH_ALL.yaml -c phi_
 
 # Darcy
 CUDA_VISIBLE_DEVICES=7 python train.py ./config/FNO/config_Darcy_PDEBench.yaml -c PDEBench | tee ./log/train/FNO_darcy_PDEBench.out
+CUDA_VISIBLE_DEVICES=7 python train.py ./config/FNO/config_Darcy_darcy.yaml -c darcy | tee ./log/train/FNO_darcy_darcy.out
 
 # cylinder
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/FNO/config_cylinder_rRE_rBC.yaml -c rRE_rBC | tee ./log/train/FNO_cylinder_rRE_rBC.out

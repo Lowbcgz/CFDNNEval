@@ -41,11 +41,10 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
         # print(mask.shape, y.shape, channel_min.shape)
         y = y * mask
 
-        if args["training_type"] in ['autoregressive']:
-            if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
-                #Model run one_step
-                if case_params.shape[-1] == 0: #darcy
-                    case_params = case_params.reshape(0)
+        if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
+            #Model run one_step
+            if case_params.shape[-1] == 0: #darcy
+                case_params = case_params.reshape(0)
 
                 loss, pred , _, _ = model.one_forward_step(x, case_params, mask,  grid, y, aux_data = aux_data, loss_fn=loss_fn) 
                 
@@ -77,7 +76,7 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
     t2 = default_timer()
     return train_loss, train_l_inf, t2 - t1
 
-def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoch, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 1):
+def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 1):
     model.eval()
     val_l2 = 0
     val_l_inf = 0
@@ -93,8 +92,6 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
 
-    (channel_min, channel_max) = args["channel_min_max"] 
-    channel_min, channel_max = channel_min.to(device), channel_max.to(device)
     with torch.no_grad():
         for x, y, mask, case_params, grid, case_id, aux_data in val_loader:
             step += 1
@@ -172,7 +169,7 @@ def val_loop(val_loader, model, loss_fn, device, training_type, output_dir, epoc
 
     return val_l2, val_l_inf
 
-def test_loop(test_loader, model, device, training_type, output_dir, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 10, test_type = 'frames'):
+def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 10, test_type = 'frames'):
     model.eval()
     step = 0
 
@@ -195,9 +192,6 @@ def test_loop(test_loader, model, device, training_type, output_dir, args, metri
     ckpt_dir = "./test/" + test_type + '/' + args["flow_name"] + '_' + args['dataset']['case_name']
     if not os.path.exists(ckpt_dir):
         os.makedirs(ckpt_dir)
-
-    (channel_min, channel_max) = args["channel_min_max"] 
-    channel_min, channel_max = channel_min.to(device), channel_max.to(device)
 
     prev_case_id = -1
     preds = []
@@ -222,6 +216,7 @@ def test_loop(test_loader, model, device, training_type, output_dir, args, metri
                 y = (y - channel_min)/(channel_max-channel_min)
 
             y = y * mask
+            
             if getattr(test_loader.dataset,"multi_step_size", 1) ==1:
                 # batch_size = x.size(0)
                 if test_type == 'frames':
@@ -356,10 +351,16 @@ def main(args):
     args["model"]["num_points"] = reduce(lambda x,y: x*y, grid.shape[1:-1])  # get num_points, especially of irregular geometry(point clouds)
 
     # get min_max per channel of train-set on the fly for normalization.
-    channel_min, channel_max = get_min_max(train_loader)   
-    args["channel_min_max"] = (channel_min, channel_max)
+    
     if args["use_norm"]:
+        channel_min, channel_max = get_min_max(train_loader)   
+        args["channel_min_max"] = (channel_min, channel_max)
         print("use min_max normalization with min=", channel_min.tolist(), ", max=", channel_max.tolist())
+        train_loader.dataset.apply_norm(channel_min, channel_max)
+        val_loader.dataset.apply_norm(channel_min, channel_max)
+        test_loader.dataset.apply_norm(channel_min, channel_max)
+        if test_ms_data is not None:
+            test_ms_loader.dataset.apply_norm(channel_min, channel_max)
 
     #model
     model = get_model(spatial_dim, n_case_params, args)
@@ -373,11 +374,11 @@ def main(args):
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)
         print("start testing...")
-        test_loop(test_loader, model, device, args["training_type"], output_dir, args, test_type='frames')
+        test_loop(test_loader, model, device, output_dir, args, test_type='frames')
         if test_ms_data is not None:  # not darcy
-            test_loop(test_ms_loader, model, device, args["training_type"], output_dir, args, test_type='multi_step')
+            test_loop(test_ms_loader, model, device, output_dir, args, test_type='multi_step')
         if args["flow_name"] not in ["Darcy"]:
-            test_loop(test_loader, model, device, args["training_type"], output_dir, args, test_type='accumulate')
+            test_loop(test_loader, model, device, output_dir, args, test_type='accumulate')
         print("Done") 
         return
     ## if continue training, resume model from checkpoint
@@ -434,7 +435,7 @@ def main(args):
             }, saved_path + "-latest.pt")
         if (epoch+1) % args["save_period"] == 0:
             print("====================validate====================")
-            val_l2_full, val_l_inf = val_loop(val_loader, model, loss_fn, device, args["training_type"], output_dir, epoch, args, plot_interval=args['plot_interval'])
+            val_l2_full, val_l_inf = val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, plot_interval=args['plot_interval'])
             print(f"[Epoch {epoch}] val_l2_full: {val_l2_full} val_l_inf: {val_l_inf}")
             print("================================================")
             if val_l2_full < min_val_loss:
