@@ -171,8 +171,9 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
         res_dict["cw_res"][name] = []
         res_dict["sw_res"][name] = []
 
-    (channel_min, channel_max) = args["channel_min_max"] 
-    channel_min, channel_max = channel_min.to(device), channel_max.to(device)
+    if args["use_norm"]:
+        (channel_min, channel_max) = args["channel_min_max"] 
+        channel_min, channel_max = channel_min.to(device), channel_max.to(device)
 
     prev_case_id = -1
     preds = []
@@ -223,12 +224,19 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                 if test_type == 'frames':
                     for name in metric_names:
                         metric_fn = getattr(metrics, name)
-                        cw, sw=metric_fn(pred * (channel_max - channel_min) + channel_min, y * (channel_max - channel_min) + channel_min)
+                        if args["use_norm"]:
+                            cw, sw=metric_fn(pred * (channel_max - channel_min) + channel_min, y * (channel_max - channel_min) + channel_min)
+                        else:
+                            cw, sw=metric_fn(pred, y)
                         res_dict["cw_res"][name].append(cw)
                         res_dict["sw_res"][name].append(sw)
                 else: # accumulate
-                    preds.append(pred * (channel_max - channel_min) + channel_min)
-                    gts.append(y * (channel_max - channel_min) + channel_min) 
+                    if args["use_norm"]:
+                        preds.append(pred * (channel_max - channel_min) + channel_min)
+                        gts.append(y * (channel_max - channel_min) + channel_min) 
+                    else:
+                        preds.append(pred)
+                        gts.append(y) 
                     
                 prev_case_id = case_id
             else:
