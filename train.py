@@ -35,10 +35,6 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
         mask = mask.to(device) # mask [b, x1, ..., xd, 1] or (b, Nx, 1)
         case_params = case_params.to(device) #parameters [b, x1, ..., xd, p] or [b, Nx, p]
         aux_data = aux_data.to(device)  # mainly for NUFNO, likely used for hidden state in traditional RNN model
-        if args["use_norm"]:
-            x = (x - channel_min)/(channel_max-channel_min) # normalization
-            y = (y - channel_min)/(channel_max-channel_min)
-        # print(mask.shape, y.shape, channel_min.shape)
         y = y * mask
 
         if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
@@ -102,50 +98,47 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
             mask = mask.to(device) # mask [b, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
             aux_data = aux_data.to(device)
-            if args["use_norm"]:
-                x = (x - channel_min)/(channel_max-channel_min) # normalization
-                y = (y - channel_min)/(channel_max-channel_min)
+            
             y = y * mask
-            if training_type == 'autoregressive':
-                if getattr(val_loader.dataset,"multi_step_size", 1)==1:
-                    # Model run
-                    if case_params.shape[-1] == 0: #darcy
-                        case_params = case_params.reshape(0)
-                    pred, _ = model(x, case_params, mask, grid, aux_data= aux_data)
-                    # Loss calculation
-                    _batch = pred.size(0)
+            if getattr(val_loader.dataset,"multi_step_size", 1)==1:
+                # Model run
+                if case_params.shape[-1] == 0: #darcy
+                    case_params = case_params.reshape(0)
+                pred, _ = model(x, case_params, mask, grid, aux_data= aux_data)
+                # Loss calculation
+                _batch = pred.size(0)
 
-                    val_l2 += loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1)).item()
-                    val_l_inf = max(val_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
-                    
+                val_l2 += loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1)).item()
+                val_l_inf = max(val_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+                
 
-                    for name in metric_names:
-                        metric_fn = getattr(metrics, name)
-                        cw, sw=metric_fn(pred, y)
-                        res_dict["cw_res"][name].append(cw)
-                        res_dict["sw_res"][name].append(sw)
-                    
-                    # if step % plot_interval == 0:
-                    #     image_dir = Path(ckpt_dir + "/images")
-                    #     if not os.path.exists(image_dir):
-                    #         os.makedirs(image_dir)
-                    #     plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
-                else:
-                    # Autoregressive loop
-                    preds=[]
-                    for i in range(val_loader.dataset.multi_step_size):
-                        pred, aux_data= model(x, case_params, mask[:,i], grid, aux_data=aux_data)
-                        preds.append(pred)
-                        x = pred
-                    preds=torch.stack(preds, dim=1)   # stack in T
-                    _batch = preds.size(0)
-                    val_l2 += loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1)).item()
-                    val_l_inf = max(val_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
-                    for name in metric_names:
-                        metric_fn = getattr(metrics, name)
-                        cw, sw=metric_fn(preds, y)
-                        res_dict["cw_res"][name].append(cw)
-                        res_dict["sw_res"][name].append(sw)
+                for name in metric_names:
+                    metric_fn = getattr(metrics, name)
+                    cw, sw=metric_fn(pred, y)
+                    res_dict["cw_res"][name].append(cw)
+                    res_dict["sw_res"][name].append(sw)
+                
+                # if step % plot_interval == 0:
+                #     image_dir = Path(ckpt_dir + "/images")
+                #     if not os.path.exists(image_dir):
+                #         os.makedirs(image_dir)
+                #     plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
+            else:
+                # Autoregressive loop
+                preds=[]
+                for i in range(val_loader.dataset.multi_step_size):
+                    pred, aux_data= model(x, case_params, mask[:,i], grid, aux_data=aux_data)
+                    preds.append(pred)
+                    x = pred
+                preds=torch.stack(preds, dim=1)   # stack in T
+                _batch = preds.size(0)
+                val_l2 += loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1)).item()
+                val_l_inf = max(val_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+                for name in metric_names:
+                    metric_fn = getattr(metrics, name)
+                    cw, sw=metric_fn(preds, y)
+                    res_dict["cw_res"][name].append(cw)
+                    res_dict["sw_res"][name].append(sw)
 
     #reshape
     for name in metric_names:
@@ -211,9 +204,7 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
             mask = mask.to(device) # mask [b, x1, ..., xd, 1] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
             aux_data = aux_data.to(device)
-            if args["use_norm"]:
-                x = (x - channel_min)/(channel_max-channel_min) # normalization
-                y = (y - channel_min)/(channel_max-channel_min)
+            
 
             y = y * mask
             
@@ -363,6 +354,7 @@ def main(args):
             test_ms_loader.dataset.apply_norm(channel_min, channel_max)
 
     #model
+    print("Norm finished")
     model = get_model(spatial_dim, n_case_params, args)
     num_params = sum(p.numel() for p in model.parameters())
     print(f"Model {args['model_name']} has {num_params} parameters")

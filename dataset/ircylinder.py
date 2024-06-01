@@ -526,9 +526,9 @@ class IRCylinderDataset_NUNO(Dataset):
             #process the parameters shape
             self.case_params = torch.stack(self.case_params).float() #(cases, p)
             cases, p = self.case_params.shape
-            _, nx, _ = self.inputs.shape
-            self.case_params = self.case_params.reshape(cases, 1, p)
-            self.case_params = self.case_params.repeat(1, nx, 1) #(cases, nx, p)
+            _, s1, s2, _ = self.inputs.shape
+            self.case_params = self.case_params.reshape(cases, 1, 1, p)
+            self.case_params = self.case_params.repeat(1, s1, s2, 1) #(cases, nx, p)
         else:
             self.case_params = torch.stack(self.case_params).float()
         
@@ -544,7 +544,7 @@ class IRCylinderDataset_NUNO(Dataset):
 
 
         # data prepossing for NUNO
-        from ..model.NUNO.nufno2d import data_preprocessing
+        # from ..model.NUNO.nufno2d import data_preprocessing
         # inputs_sd (N_total, max_Np, 8, C)
         # labels_sd (N_total, multi_step, max_Np, 8, C) or (N_total, max_Np, 8, C)
         # mask_sd (N_total, multi_step, max_Np, 8, 1) or (N_total, max_Np, 8, 1)
@@ -577,6 +577,7 @@ class IRCylinderDataset_NUNO(Dataset):
         mask = self.masks[idx]                  # (nx, 1)
         case_id = self.case_ids[idx]
         case_params = self.case_params[case_id] # (nx, p)
-        grid = self.grids[case_id]              # (nx, 2)  
-        # return inputs, label, mask, case_params, grid, case_id
+        grid = self.grids[case_id]
+        aux_data = tensor(())              # (nx, 2)  
+        return inputs, label, mask, case_params, grid, case_id, aux_data
         # return inputs_sd, labels_sd, mask_sd, cases_sd, grid_sd, case_id, inputs_sd_grid

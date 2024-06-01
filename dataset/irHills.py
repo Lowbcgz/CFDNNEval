@@ -297,6 +297,8 @@ class IRHillsDataset_NUNO(Dataset):
                     
                     for case in keys:
                         cnt += 1
+                        # if cnt >= 2:
+                        #     break
                         if (cnt) % reduced_batch != 0:
                             continue
                         data = data_group[case]
@@ -421,6 +423,10 @@ class IRHillsDataset_NUNO(Dataset):
         case_params["RE"] = (
             case_params["RE"] - 505.6250000000 
         ) / 299.4196166992
+
+    def apply_norm(self, channel_min, channel_max):
+        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
+        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
 
     def __len__(self):
         return len(self.inputs)
