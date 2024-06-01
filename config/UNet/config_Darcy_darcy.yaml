@@ -9,7 +9,6 @@ save_period: 10
 plot_interval: 1
 # 训练相关参数
 seed: 0
-training_type: "autoregressive"
 epochs: 400
 # 数据集相关参数 
 dataset:
