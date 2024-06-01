@@ -28,8 +28,8 @@ def plot_predictions(
     error_dir = out_dir / "error"
     error_dir.mkdir(exist_ok=True, parents=True)
 
-    pred_arr = pred[0].cpu().detach().numpy()
-    label_arr = label[0].cpu().detach().numpy()
+    pred_arr = pred.squeeze().cpu().detach().numpy()
+    label_arr = label.squeeze().cpu().detach().numpy()
 
     # Plot and save images
     u_min = min(pred_arr.min(), label_arr.min())
@@ -99,24 +99,25 @@ def test_plot(test_loader, model, device, fig_dir, error_dir, args):
         total_frames = len(pred_list)
         print(f'total frames is {total_frames}')
         
-        #plot
+        #plot, only for regular grid
         assert len(pred_list) == len(gt_list)
-        cnt = 0
-        time_list = ['0', '0.25T', '0.5T', '0.75T', 'T']
-        for i in range(0, len(pred_list), len(pred_list) // 4):
-            pred = pred_list[i]
-            gt = gt_list[i]
-            time = time_list[cnt]
-            for j in range(pred.shape[-1]):
-                plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(fig_dir), message=f'variable{j}_at_' + time)
-            cnt += 1
-        
-        if cnt != 5:
-            pred = pred_list[-1]
-            gt = gt_list[-1]
-            time = time_list[-1]
-            for j in range(pred.shape[-1]):
-                plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(fig_dir), message=f'variable{j}_at_' + time)
+        if "ir" not in args["dataset"]["case_name"]:
+            cnt = 0
+            time_list = ['0', '0.25T', '0.5T', '0.75T', 'T']
+            for i in range(0, len(pred_list), len(pred_list) // 4):
+                pred = pred_list[i]
+                gt = gt_list[i]
+                time = time_list[cnt]
+                for j in range(pred.shape[-1]):
+                    plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(fig_dir), message=f'variable{j}_at_' + time)
+                cnt += 1
+            
+            if cnt != 5:
+                pred = pred_list[-1]
+                gt = gt_list[-1]
+                time = time_list[-1]
+                for j in range(pred.shape[-1]):
+                    plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(fig_dir), message=f'variable{j}_at_' + time)
         
         #get error
         mse = []
@@ -201,15 +202,11 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config_file", type=str, help="Path to config file")
-    parser.add_argument("--test", action='store_true', help='test mode')
-    parser.add_argument("--continue_training", action='store_true', help='continue training')
     parser.add_argument("-c", "--case_name", type=str, default="", help="For the case, if no value is entered, the yaml file shall prevail")
 
     cmd_args = parser.parse_args()
     with open(cmd_args.config_file, 'r') as f:
         args = yaml.safe_load(f)
-    args['if_training'] = not cmd_args.test
-    args['continue_training'] = cmd_args.continue_training
     if len(cmd_args.case_name) > 0:
         args['dataset']['case_name'] = cmd_args.case_name
 

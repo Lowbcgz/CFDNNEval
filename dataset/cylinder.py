@@ -19,6 +19,7 @@ class CylinderDataset(Dataset):
                  norm_bc = True,
                  reshape_parameters = True,
                  multi_step_size = 1,
+                 filter_outlier = True
                  ):
         
         '''
@@ -98,7 +99,7 @@ class CylinderDataset(Dataset):
                                     continue
                                 this_case_params[param_name] = np.array(data[param_name], dtype=np.float32)[0]
                         
-                        if name == 'rRE' and (this_case_params['RE'] < 15 or this_case_params['RE'] > 99999):
+                        if name == 'rRE' and (this_case_params['RE'] < 15 or this_case_params['RE'] > 99999) and filter_outlier:
                             continue
                         
                         #############################################################
