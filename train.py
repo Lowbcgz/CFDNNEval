@@ -82,9 +82,6 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
         res_dict["cw_res"][name] = []
         res_dict["sw_res"][name] = []
     
-    ckpt_dir = output_dir + f"/ckpt-{epoch}"
-    if not os.path.exists(ckpt_dir):
-        os.makedirs(ckpt_dir)
 
     with torch.no_grad():
         for x, y, mask, case_params, grid, case_id in val_loader:
@@ -115,11 +112,6 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
                     res_dict["cw_res"][name].append(cw)
                     res_dict["sw_res"][name].append(sw)
                 
-                # if step % plot_interval == 0:
-                #     image_dir = Path(ckpt_dir + "/images")
-                #     if not os.path.exists(image_dir):
-                #         os.makedirs(image_dir)
-                #     plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
             else:
                 # Autoregressive loop
                 preds=[]
@@ -178,10 +170,9 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
     for name in metric_names:
         res_dict["cw_res"][name] = []
         res_dict["sw_res"][name] = []
-    
-    ckpt_dir = "./test/" + test_type + '/' + args["flow_name"] + '_' + args['dataset']['case_name']
-    if not os.path.exists(ckpt_dir):
-        os.makedirs(ckpt_dir)
+
+    (channel_min, channel_max) = args["channel_min_max"] 
+    channel_min, channel_max = channel_min.to(device), channel_max.to(device)
 
     prev_case_id = -1
     preds = []
@@ -228,15 +219,16 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                 
                 pred = model(x, case_params, mask, grid)
 
+                #collect data, need to reverse normalization
                 if test_type == 'frames':
                     for name in metric_names:
                         metric_fn = getattr(metrics, name)
-                        cw, sw=metric_fn(pred, y)
+                        cw, sw=metric_fn(pred * (channel_max - channel_min) + channel_min, y * (channel_max - channel_min) + channel_min)
                         res_dict["cw_res"][name].append(cw)
                         res_dict["sw_res"][name].append(sw)
                 else: # accumulate
-                    preds.append(pred)
-                    gts.append(y) 
+                    preds.append(pred * (channel_max - channel_min) + channel_min)
+                    gts.append(y * (channel_max - channel_min) + channel_min) 
                     
                 prev_case_id = case_id
             else:
@@ -253,20 +245,6 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                     res_dict["cw_res"][name].append(cw)
                     res_dict["sw_res"][name].append(sw)
                
-            # if step % plot_interval == 0:
-            #     image_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/images")
-            #     if not os.path.exists(image_dir):
-            #         os.makedirs(image_dir)
-            #     if test_type == 'frames':
-            #         plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
-            #     elif test_type == 'accumulate':
-            #         plot_predictions(label = y, pred = pred, out_dir=image_dir, step=step)
-
-            #     #plot the stream line    
-            #     streamline_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/streamline")
-            #     if not os.path.exists(streamline_dir):
-            #         os.makedirs(streamline_dir)
-            #     plot_stream_line(pred = pred, label = y, grid = grid, out_dir = streamline_dir, step=step)
             
     t2 = default_timer()
     Mean_inference_time = (t2-t1)/len(test_loader.dataset)
