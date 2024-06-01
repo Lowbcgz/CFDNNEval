@@ -9,17 +9,18 @@ save_period: 10
 plot_interval: 1
 # 训练相关参数
 seed: 0
+training_type: "autoregressive"
 epochs: 400
 # 数据集相关参数 
 dataset:
   saved_folder: "/data1/FluidData/darcy/"
   reduced_resolution: 1
   reduced_batch: 1
-  case_name: 'ar_as'
+  case_name: 'darcy'
 # dataloader相关参数
 dataloader:
-  train_batch_size: 128
-  val_batch_size: 128
+  train_batch_size: 64
+  val_batch_size: 64
   test_batch_size: 1
   num_workers: 4
   pin_memory: False
