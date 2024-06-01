@@ -30,16 +30,18 @@ def errors_and_draw(preds, gts , fig_dir, error_dir, args):
             pred = preds[i]
             gt = gts[i]
             time = time_list[cnt]
-            for j in range(pred.shape[-1]):
-                plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(fig_dir), message=f'variable{j}_at_' + time)
+            vel_label = gt[..., 0:2].norm(dim=-1)
+            vel_pred = pred[..., 0:2].norm(dim=-1)
+            plot_predictions(label = vel_label, pred = vel_pred, out_dir=Path(fig_dir), message=f'vel_at_time_' + time)
             cnt += 1
         
         if cnt != 5:
             pred = preds[-1]
             gt = gts[-1]
             time = time_list[-1]
-            for j in range(pred.shape[-1]):
-                plot_predictions(label = gt[..., j], pred = pred[..., j], out_dir=Path(fig_dir), message=f'variable{j}_at_' + time)
+            vel_label = gt[..., 0:2].norm(dim=-1)
+            vel_pred = pred[..., 0:2].norm(dim=-1)
+            plot_predictions(label = vel_label, pred = vel_pred, out_dir=Path(fig_dir), message=f'vel_at_time_' + time)
     
     #get error
     mse = []
@@ -121,8 +123,8 @@ def test_loop(test_loader, model, device, fig_dir, error_dir, args, metric_names
                             res_dict["sw_res"][name].append(sw)
                         
                         # TODO : call drawing here
-                        fig_dir_sub = Path(fig_dir) / f"case{case_count}"
-                        error_dir_sub = Path(error_dir) / f"case{case_count}"
+                        fig_dir_sub = Path(fig_dir) / f"case{case_count-1}"
+                        error_dir_sub = Path(error_dir) / f"case{case_count-1}"
                         errors_and_draw(preds.squeeze(0), gts.squeeze(0), fig_dir_sub, error_dir_sub, args)
                     preds = []
                     gts = []
@@ -207,10 +209,10 @@ def main(args):
     checkpoint = None
     saved_dir = os.path.join(args["saved_dir"], os.path.join(args["model_name"], args["flow_name"] + '_' + args['dataset']['case_name']))
     
-    fig_dir = os.path.join(args['output_dir'], 'expt_fig')
+    fig_dir = os.path.join(args['output_dir'], 'extp_fig')
     fig_dir = os.path.join(fig_dir, os.path.join(args["model_name"],args["flow_name"] + '_' + args['dataset']['case_name']))
 
-    error_dir = os.path.join(args['output_dir'], 'expt_error')
+    error_dir = os.path.join(args['output_dir'], 'extp_error')
     error_dir = os.path.join(error_dir, os.path.join(args["model_name"],args["flow_name"] + '_' + args['dataset']['case_name']))
 
     if not os.path.exists(fig_dir):

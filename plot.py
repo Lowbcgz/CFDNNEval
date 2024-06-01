@@ -36,28 +36,34 @@ def plot_predictions(
     u_max = max(pred_arr.max(), label_arr.max())
 
     #ground truth
+    fig, ax = plt.subplots(figsize = (4,4))
     plt.axis("off")
-    plt.imshow(
-        label_arr, vmin=u_min, vmax=u_max, cmap="coolwarm"
+    ax.contourf(
+        label_arr, vmin=u_min, vmax=u_max, levels=150, cmap='jet'
     )
+    ax.set_aspect('equal', adjustable='box')
     plt.savefig(label_dir / f"{message}.png", bbox_inches="tight", pad_inches=0)
-    plt.clf()
+    plt.close()
 
     #pred
+    fig, ax = plt.subplots(figsize = (4,4))
     plt.axis("off")
-    plt.imshow(
-        pred_arr, vmin=u_min, vmax=u_max, cmap="coolwarm"
+    ax.contourf(
+        pred_arr, vmin=u_min, vmax=u_max, levels=150, cmap='jet'
     )
+    ax.set_aspect('equal', adjustable='box')
     plt.savefig(pred_dir / f"{message}.png", bbox_inches="tight", pad_inches=0)
-    plt.clf()
+    plt.close()
 
     #error
+    fig, ax = plt.subplots(figsize = (4,4))
     plt.axis("off")
-    plt.imshow(
-        np.abs(pred_arr - label_arr), vmin=u_min, vmax=u_max, cmap="coolwarm"
+    ax.contourf(
+        np.abs(pred_arr - label_arr), vmin=u_min, vmax=u_max, levels=150
     )
+    ax.set_aspect('equal', adjustable='box')
     plt.savefig(error_dir / f"{message}.png", bbox_inches="tight", pad_inches=0)
-    plt.clf()
+    plt.close()
 
 def test_plot(test_loader, model, device, fig_dir, error_dir, args):
     model.eval()
