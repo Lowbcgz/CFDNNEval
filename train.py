@@ -171,8 +171,9 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
         res_dict["cw_res"][name] = []
         res_dict["sw_res"][name] = []
 
-    (channel_min, channel_max) = args["channel_min_max"] 
-    channel_min, channel_max = channel_min.to(device), channel_max.to(device)
+    if args["use_norm"]:
+        (channel_min, channel_max) = args["channel_min_max"] 
+        channel_min, channel_max = channel_min.to(device), channel_max.to(device)
 
     prev_case_id = -1
     preds = []
