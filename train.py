@@ -23,8 +23,9 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
     train_loss = 0
     train_l_inf = 0
     step = 0
-    (channel_min, channel_max) = args["channel_min_max"] 
-    channel_min, channel_max = channel_min.to(device), channel_max.to(device)
+    if args["use_norm"]:
+        (channel_min, channel_max) = args["channel_min_max"] 
+        channel_min, channel_max = channel_min.to(device), channel_max.to(device)
     for x, y, mask, case_params, grid, _, aux_data in tqdm(train_loader):
         step += 1
         # batch_size = x.size(0)
@@ -50,24 +51,24 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
                 _batch = pred.size(0)
                 train_loss += loss.item()
                 train_l_inf = max(train_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
-            else:
-                # Autoregressive loop
-                preds=[]
-                total_loss = 0
-                for i in range(train_loader.dataset.multi_step_size):
-                    loss, pred , aux_data, _ = model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], aux_data=aux_data, loss_fn=loss_fn)
-                    preds.append(pred)
-                    total_loss = total_loss + loss
-                    x = pred
-                preds=torch.stack(preds, dim=1)
-                _batch = preds.size(0)
-                # loss = loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1))
-                optimizer.zero_grad()
-                total_loss.backward()
-                optimizer.step()
+        else:
+            # Autoregressive loop
+            preds=[]
+            total_loss = 0
+            for i in range(train_loader.dataset.multi_step_size):
+                loss, pred , aux_data, _ = model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], aux_data=aux_data, loss_fn=loss_fn)
+                preds.append(pred)
+                total_loss = total_loss + loss
+                x = pred
+            preds=torch.stack(preds, dim=1)
+            _batch = preds.size(0)
+            # loss = loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1))
+            optimizer.zero_grad()
+            total_loss.backward()
+            optimizer.step()
 
-                train_loss += total_loss.item()
-                train_l_inf = max(train_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+            train_loss += total_loss.item()
+            train_l_inf = max(train_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
     train_loss /= step      
     t2 = default_timer()
     return train_loss, train_l_inf, t2 - t1
@@ -418,6 +419,10 @@ def main(args):
         scheduler.step()
         total_time += time
         loss_history.append(train_loss)
+        loss_history_temp = np.array(loss_history)
+        if not os.path.exists('./log/loss/'):
+            os.makedirs('./log/loss/')
+        np.save('./log/loss/' + args["model_name"]+args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy', loss_history_temp)
         print(f"[Epoch {epoch}] train_loss: {train_loss}, train_l_inf: {train_l_inf}, time_spend: {time:.3f}")
         ## save latest
         model_state_dict = model.module.state_dict() if torch.cuda.device_count() > 1 else model.state_dict()
@@ -438,7 +443,7 @@ def main(args):
                     "optimizer_state_dict": optimizer.state_dict()
                     }, saved_path + "-best.pt")
     print("Done.")
-    loss_history = np.array(loss_history)
+    loss_history_temp = np.array(loss_history)
     if not os.path.exists('./log/loss/'):
         os.makedirs('./log/loss/')
     np.save('./log/loss/' + args["model_name"]+args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy', loss_history)

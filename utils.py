@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import random
-from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, KNO2d, UNet2d, LSM_2d_ir, geoFNO2d, Oformer, NUFNO3d
+from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, KNO2d, UNet2d, LSM_2d_ir, geoFNO2d, Oformer, NUFNO2d, NUFNO3d
 from dataset import *
 import os
 import shutil
@@ -520,6 +520,14 @@ def get_model(spatial_dim, n_case_params, args):
                       modes1 = model_args['modes'],
                       modes2 = model_args['modes'],
                       n_case_params = n_case_params)
+            elif model_name == "NUFNO":
+                model = NUFNO2d(inputs_channel=model_args['inputs_channel'],
+                              outputs_channel=model_args['outputs_channel'],
+                      width = model_args['width'],
+                      modes1 = model_args['modes'],
+                      modes2 = model_args['modes'],
+                      n_case_params = n_case_params,
+                      n_subdomains = model_args['n_subdomains'])
             elif model_name == "geoFNO":
                 model = geoFNO2d(inputs_channel=model_args['inputs_channel'],
                                 outputs_channel=model_args['outputs_channel'],

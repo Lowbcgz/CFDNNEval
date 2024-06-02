@@ -425,8 +425,9 @@ class IRHillsDataset_NUNO(Dataset):
         ) / 299.4196166992
 
     def apply_norm(self, channel_min, channel_max):
-        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
-        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
+        for i in range(self.inputs.shape[0]):
+            self.inputs[i] = (self.inputs[i] - channel_min) / (channel_max - channel_min)
+            self.labels[i] = (self.labels[i] - channel_min) / (channel_max - channel_min)
 
     def __len__(self):
         return len(self.inputs)
