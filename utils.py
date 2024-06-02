@@ -163,8 +163,10 @@ def get_dataset(args):
             test_ms_data = None
     elif args["flow_name"] == "ircylinder":
         if args["model_name"] == "NUFNO":
-            IRCylinderDataset = IRCylinderDataset_NUNO
-        train_data = IRCylinderDataset(
+            _IRCylinderDataset = IRCylinderDataset_NUNO
+        else:
+            _IRCylinderDataset = IRCylinderDataset
+        train_data = _IRCylinderDataset(
                                 filename='cylinder_train.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -175,7 +177,7 @@ def get_dataset(args):
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
-        val_data = IRCylinderDataset(
+        val_data = _IRCylinderDataset(
                                 filename='cylinder_dev.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -186,7 +188,7 @@ def get_dataset(args):
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
-        test_data = IRCylinderDataset(
+        test_data = _IRCylinderDataset(
                                 filename='cylinder_test.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -197,7 +199,7 @@ def get_dataset(args):
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
-            test_ms_data = IRCylinderDataset(
+            test_ms_data = _IRCylinderDataset(
                                     filename='cylinder_test.hdf5',
                                     saved_folder=dataset_args['saved_folder'],
                                     case_name=dataset_args['case_name'],
@@ -374,8 +376,10 @@ def get_dataset(args):
             test_ms_data = None
     elif args["flow_name"] == "irhills":
         if args["model_name"] == "NUFNO":
-            IRHillsDataset = IRHillsDataset_NUNO
-        train_data = IRHillsDataset(
+            _IRHillsDataset = IRHillsDataset_NUNO
+        else:
+            _IRHillsDataset = IRHillsDataset
+        train_data = _IRHillsDataset(
                                 filename=args['flow_name'][2:] + '_train.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -386,7 +390,7 @@ def get_dataset(args):
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
-        val_data = IRHillsDataset(
+        val_data = _IRHillsDataset(
                                 filename=args['flow_name'][2:] + '_dev.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -397,7 +401,7 @@ def get_dataset(args):
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
-        test_data = IRHillsDataset(
+        test_data = _IRHillsDataset(
                                 filename=args['flow_name'][2:] + '_test.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -408,7 +412,7 @@ def get_dataset(args):
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
-            test_ms_data = IRHillsDataset(
+            test_ms_data = _IRHillsDataset(
                                     filename=args['flow_name'][2:] + '_test.hdf5',
                                     saved_folder=dataset_args['saved_folder'],
                                     case_name=dataset_args['case_name'],
