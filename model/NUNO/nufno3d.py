@@ -267,15 +267,16 @@ class NUFNO3d(nn.Module):
 
     def forward(self, x, case_params, mask, grid, aux_data):
         if aux_data.numel() > 0:
-            x = aux_data
+            x = aux_data.clone()
         grid_samp = grid
         batch_size = x.shape[0]
         x = x.reshape(list(x.shape[:-2])+[-1])
+        grid_x = torch.zeros(list(x.shape[:-2])+[3]).to(x.device)
         # x, case_params, bbox_sd, grid_shape, indices_sd, max_n_points_sd, order_sd, xyz, xyz_sd = self.data_interp(x, case_params, mask, grid)
-        grid = self.get_grid(x.shape, x.device)
-        s1, s2, s3 = grid.shape[1], grid.shape[2], grid.shape[3]
+        grid_x = self.get_grid(x.shape, x.device)
+        s1, s2, s3 = grid_x.shape[1], grid_x.shape[2], grid_x.shape[3]
         # print(x.shape, grid.shape, case_params.shape)
-        x = torch.cat((x, grid, case_params), dim=-1)
+        x = torch.cat((x, grid_x, case_params), dim=-1)
         x = self.p(x)
         x = x.permute(0, 4, 1, 2, 3)
         x = F.pad(x, [0,self.padding]) # pad the domain if input is non-periodic
@@ -332,6 +333,7 @@ class NUFNO3d(nn.Module):
             .reshape(batch_size, self.n_subdomains, -1, self.outputs_channel)\
             .permute(0, 2, 1, 3)
         out = out*mask
+        del grid_x
         # print(out.shape)
             # Output shape: (batch_size, n_points_sd_padded, 
             #    n_subdomains, output_dim)

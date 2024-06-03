@@ -163,6 +163,7 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
 
     return val_l2, val_l_inf
 
+
 def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 10, test_type = 'frames'):
     model.eval()
     step = 0
@@ -182,17 +183,20 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
     for name in metric_names:
         res_dict["cw_res"][name] = []
         res_dict["sw_res"][name] = []
-    
-    ckpt_dir = "./test/" + test_type + '/' + args["flow_name"] + '_' + args['dataset']['case_name']
-    if not os.path.exists(ckpt_dir):
-        os.makedirs(ckpt_dir)
+
+    if args["use_norm"]:
+        (channel_min, channel_max) = args["channel_min_max"] 
+        channel_min, channel_max = channel_min.to(device), channel_max.to(device)
 
     prev_case_id = -1
     preds = []
     gts = []
+    aux_data = torch.tensor(())
     t1 = default_timer()
     with torch.no_grad():
-        for x, y, mask, case_params, grid, case_id, aux_data in test_loader:
+        for x, y, mask, case_params, grid, case_id, _ in test_loader:
+            if test_type in ['frames', 'multi_step'] :
+                aux_data = torch.tensor(())
             case_id = case_id.item()
             if prev_case_id != case_id:
                 prev_case_id = -1
@@ -204,9 +208,6 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
             grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims] 
             mask = mask.to(device) # mask [b, x1, ..., xd, 1] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
-            aux_data = aux_data.to(device)
-            
-
             y = y * mask
             
             if getattr(test_loader.dataset,"multi_step_size", 1) ==1:
@@ -217,9 +218,10 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                 elif test_type == 'accumulate': 
                     if prev_case_id == -1:
                         # new case start
+                        aux_data = torch.Tensor(())
                         if len(preds)> 0: 
-                            preds=torch.stack(preds, dim=1)   # [1, t, x1, ...,xd, v]
-                            gts = torch.stack(gts, dim=1) # [1, t, x1, ...,xd, v]
+                            preds=torch.stack(preds, dim=0)   # [1, t, x1, ...,xd, v]
+                            gts = torch.stack(gts, dim=0) # [1, t, x1, ...,xd, v]
                             for name in metric_names:
                                 metric_fn = getattr(metrics, name)
                                 cw, sw=metric_fn(preds, gts)
@@ -229,30 +231,38 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                         preds = []
                         gts = []
                     else:
-                        x = pred     # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
-                        aux_data = aux_out
+                        x = pred.detach().clone() # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
+                        aux_data = aux_data.detach()
                 else:
                     raise Exception(f"test_type {test_type} is not support for a single_step test_loader ")
-                
-                pred, aux_out = model(x, case_params, mask, grid, aux_data= aux_data)
 
+                pred, aux_data = model(x, case_params, mask, grid, aux_data)
+
+                #collect data, need to reverse normalization
                 if test_type == 'frames':
                     for name in metric_names:
                         metric_fn = getattr(metrics, name)
-                        cw, sw=metric_fn(pred, y)
+                        if args["use_norm"]:
+                            cw, sw=metric_fn(pred * (channel_max - channel_min) + channel_min, y * (channel_max - channel_min) + channel_min)
+                        else:
+                            cw, sw=metric_fn(pred, y)
                         res_dict["cw_res"][name].append(cw)
                         res_dict["sw_res"][name].append(sw)
                 else: # accumulate
-                    preds.append(pred)
-                    gts.append(y) 
+                    if args["use_norm"]:
+                        preds.append(pred * (channel_max - channel_min) + channel_min)
+                        gts.append(y * (channel_max - channel_min) + channel_min) 
+                    else:
+                        preds.append(pred)
+                        gts.append(y) 
                     
                 prev_case_id = case_id
             else:
                 # autoregressive loop for multi_step
                 preds=[]
                 for i in range(test_loader.dataset.multi_step_size):
-                    pred, aux_data = model(x, case_params, mask[:,i], grid, aux_data = aux_data)
-                    preds.append(pred)
+                    pred, aux_data = model(x, case_params, mask[:,i], grid, aux_data)
+                    preds.append(pred * (channel_max - channel_min) + channel_min)
                     x = pred
                 preds=torch.stack(preds, dim=1)
                 for name in metric_names:
@@ -261,20 +271,6 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                     res_dict["cw_res"][name].append(cw)
                     res_dict["sw_res"][name].append(sw)
                
-            # if step % plot_interval == 0:
-            #     image_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/images")
-            #     if not os.path.exists(image_dir):
-            #         os.makedirs(image_dir)
-            #     if test_type == 'frames':
-            #         plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
-            #     elif test_type == 'accumulate':
-            #         plot_predictions(label = y, pred = pred, out_dir=image_dir, step=step)
-
-            #     #plot the stream line    
-            #     streamline_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/streamline")
-            #     if not os.path.exists(streamline_dir):
-            #         os.makedirs(streamline_dir)
-            #     plot_stream_line(pred = pred, label = y, grid = grid, out_dir = streamline_dir, step=step)
             
     t2 = default_timer()
     Mean_inference_time = (t2-t1)/len(test_loader.dataset)
@@ -306,6 +302,150 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                        args["flow_name"] + '_' + args['dataset']['case_name'], 
                        append = True)
     return 
+
+# def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 10, test_type = 'frames'):
+#     model.eval()
+#     step = 0
+
+#     if test_type == 'frames':
+#         print('consider the result between frames')
+#     elif test_type == 'accumulate':
+#         print('consider the accumulate result')
+#     elif test_type == "multi_step":
+#         print("consider the accumulate result for multi_step")
+#     else:
+#         raise("test type error, plz set it as 'frames', 'accumulate' or 'multi_step'")
+
+    
+#     res_dict = {"cw_res":{},  # channel-wise
+#                 "sw_res":{},}  # sample-wise
+#     for name in metric_names:
+#         res_dict["cw_res"][name] = []
+#         res_dict["sw_res"][name] = []
+    
+#     ckpt_dir = "./test/" + test_type + '/' + args["flow_name"] + '_' + args['dataset']['case_name']
+#     if not os.path.exists(ckpt_dir):
+#         os.makedirs(ckpt_dir)
+
+#     prev_case_id = -1
+#     preds = []
+#     gts = []
+#     t1 = default_timer()
+#     with torch.no_grad():
+#         for x, y, mask, case_params, grid, case_id, aux_data in test_loader:
+#             case_id = case_id.item()
+#             if prev_case_id != case_id:
+#                 prev_case_id = -1
+#                 step = 0
+            
+#             step += 1
+#             x = x.to(device)
+#             y = y.to(device) # y: target tensor  [b, x1, ..., xd, v] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, v]
+#             grid = grid.to(device) # grid: meshgrid [b, x1, ..., xd, dims] 
+#             mask = mask.to(device) # mask [b, x1, ..., xd, 1] if mutli_step_size ==1 else [b, multi_step_size, x1, ..., xd, 1]
+#             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
+#             aux_data = aux_data.to(device)
+            
+
+#             y = y * mask
+            
+#             if getattr(test_loader.dataset,"multi_step_size", 1) ==1:
+#                 # batch_size = x.size(0)
+#                 if test_type == 'frames':
+#                     # x = x.to(device) # x: input tensor (The previous time step grand truth data) [b, x1, ..., xd, v]
+#                     pass
+#                 elif test_type == 'accumulate': 
+#                     if prev_case_id == -1:
+#                         # new case start
+#                         if len(preds)> 0: 
+#                             preds=torch.stack(preds, dim=1)   # [1, t, x1, ...,xd, v]
+#                             gts = torch.stack(gts, dim=1) # [1, t, x1, ...,xd, v]
+#                             for name in metric_names:
+#                                 metric_fn = getattr(metrics, name)
+#                                 cw, sw=metric_fn(preds, gts)
+#                                 res_dict["cw_res"][name].append(cw)
+#                                 res_dict["sw_res"][name].append(sw)
+
+#                         preds = []
+#                         gts = []
+#                     else:
+#                         x = pred     # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
+#                         aux_data = aux_out
+#                 else:
+#                     raise Exception(f"test_type {test_type} is not support for a single_step test_loader ")
+                
+#                 pred, aux_out = model(x, case_params, mask, grid, aux_data= aux_data)
+
+#                 if test_type == 'frames':
+#                     for name in metric_names:
+#                         metric_fn = getattr(metrics, name)
+#                         cw, sw=metric_fn(pred, y)
+#                         res_dict["cw_res"][name].append(cw)
+#                         res_dict["sw_res"][name].append(sw)
+#                 else: # accumulate
+#                     preds.append(pred)
+#                     gts.append(y) 
+                    
+#                 prev_case_id = case_id
+#             else:
+#                 # autoregressive loop for multi_step
+#                 preds=[]
+#                 for i in range(test_loader.dataset.multi_step_size):
+#                     pred, aux_data = model(x, case_params, mask[:,i], grid, aux_data = aux_data)
+#                     preds.append(pred)
+#                     x = pred
+#                 preds=torch.stack(preds, dim=1)
+#                 for name in metric_names:
+#                     metric_fn = getattr(metrics, name)
+#                     cw, sw=metric_fn(preds, y)
+#                     res_dict["cw_res"][name].append(cw)
+#                     res_dict["sw_res"][name].append(sw)
+               
+#             # if step % plot_interval == 0:
+#             #     image_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/images")
+#             #     if not os.path.exists(image_dir):
+#             #         os.makedirs(image_dir)
+#             #     if test_type == 'frames':
+#             #         plot_predictions(inp = x, label = y, pred = pred, out_dir=image_dir, step=step)
+#             #     elif test_type == 'accumulate':
+#             #         plot_predictions(label = y, pred = pred, out_dir=image_dir, step=step)
+
+#             #     #plot the stream line    
+#             #     streamline_dir = Path(ckpt_dir + '/case_id' + str(case_id) + "/streamline")
+#             #     if not os.path.exists(streamline_dir):
+#             #         os.makedirs(streamline_dir)
+#             #     plot_stream_line(pred = pred, label = y, grid = grid, out_dir = streamline_dir, step=step)
+            
+#     t2 = default_timer()
+#     Mean_inference_time = (t2-t1)/len(test_loader.dataset)
+    
+#     if test_type == 'frames':
+#         res_dict['Mean inference time'] = Mean_inference_time
+#         print("averge time: {0:.4f} s".format(Mean_inference_time))
+
+#     #reshape
+#     for name in metric_names:
+#         cw_res_list = res_dict["cw_res"][name]
+#         sw_res_list = res_dict["sw_res"][name]
+#         if name == "MaxError":
+#             cw_res = torch.stack(cw_res_list, dim=0)
+#             cw_res, _ = torch.max(cw_res, dim=0)
+#             sw_res = torch.stack(sw_res_list)
+#             sw_res = torch.max(sw_res)
+#         else:
+#             cw_res = torch.cat(cw_res_list, dim=0)
+#             cw_res = torch.mean(cw_res, dim=0)
+#             sw_res = torch.cat(sw_res_list, dim=0)
+#             sw_res = torch.mean(sw_res, dim=0)
+#         res_dict["cw_res"][name] = cw_res
+#         res_dict["sw_res"][name] = sw_res
+
+#     metrics.print_res(res_dict)
+#     metrics.write_res(res_dict, 
+#                       os.path.join(args["output_dir"],args["model_name"]+test_type + '_results.csv'),
+#                        args["flow_name"] + '_' + args['dataset']['case_name'], 
+#                        append = True)
+#     return 
 
 def main(args):
     #init

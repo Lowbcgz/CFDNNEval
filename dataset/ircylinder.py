@@ -297,6 +297,8 @@ class IRCylinderDataset_NUNO(Dataset):
                     tree = None
                     for case in keys:
                         cnt += 1
+                        # if cnt > 2:
+                        #     break
                         if (cnt) % reduced_batch != 0:
                             continue
                         data = data_group[case]
