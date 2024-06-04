@@ -22,8 +22,8 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
     train_loss = 0
     train_l_inf = 0
     step = 0
-    (channel_min, channel_max) = args["channel_min_max"] 
-    channel_min, channel_max = channel_min.to(device), channel_max.to(device)
+    # (channel_min, channel_max) = args["channel_min_max"] 
+    # channel_min, channel_max = channel_min.to(device), channel_max.to(device)
     for x, y, mask, case_params, grid, _ in train_loader:
         step += 1
         # batch_size = x.size(0)
