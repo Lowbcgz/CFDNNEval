@@ -220,8 +220,9 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                         # new case start
                         aux_data = torch.Tensor(())
                         if len(preds)> 0: 
-                            preds=torch.stack(preds, dim=0)   # [1, t, x1, ...,xd, v]
-                            gts = torch.stack(gts, dim=0) # [1, t, x1, ...,xd, v]
+                            preds=torch.stack(preds, dim=0).unsqueeze(0)   # [1, t, x1, ...,xd, v]
+                            # print(preds.shape)
+                            gts = torch.stack(gts, dim=0).unsqueeze(0) # [1, t, x1, ...,xd, v]
                             for name in metric_names:
                                 metric_fn = getattr(metrics, name)
                                 cw, sw=metric_fn(preds, gts)
