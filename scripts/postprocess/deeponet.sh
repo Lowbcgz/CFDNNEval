@@ -25,7 +25,7 @@
 # collect metrics like nmse
 
 # NSCH
-CUDA_VISIBLE_DEVICES=0 python collect_nmse.py ./config/DeepONet/config_NSCH_ALL.yaml -c ca
+CUDA_VISIBLE_DEVICES=0 python collect_nmse.py ./config/DeepONet/config_NSCH_ALL.yaml -c eps
 
 # TGV
 CUDA_VISIBLE_DEVICES=0 python collect_nmse.py ./config/DeepONet/config_TGV_all.yaml -c all

@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import torch
 from dataset import *
 from torch.utils.data import DataLoader
-from metrics import NMSE, MSE, MaxError
+import metrics
 
 default_minmax_channels = {
     "cavity": {
@@ -44,7 +44,19 @@ default_minmax_channels = {
     },
     "NSCH":{
         "ca": torch.tensor([[-1.0031050443649292, -1.0, -0.006659443024545908],
-                             [1.0169320106506348, 1.0, 0.006659443024545908]])
+                             [1.0169320106506348, 1.0, 0.006659443024545908]]),
+        "phi": torch.tensor([[-1.1130390167236328, -1.1014549732208252, -0.04720066860318184],
+                             [1.0230979919433594, 1.101511001586914, 0.04855911061167717]]),
+        "eps": torch.tensor([[-1.0044399499893188, -1.0, -0.013375669717788696],
+                             [1.0347859859466553, 1.0, 0.013375669717788696]]),
+        "mob": torch.tensor([[-1.0075429677963257, -1.0, -0.03635774925351143],
+                             [1.0241769552230835, 1.0, 0.03635774925351143]]),
+        "re": torch.tensor([[-1.0031670331954956, -1.003255009651184, -0.05740956962108612],
+                            [1.0175230503082275, 1.003255009651184, 0.05740956962108612]]),
+        "ibc": torch.tensor([[-1.085737943649292, -9.99176025390625, -0.061475109308958054],
+                             [1.1198190450668335, 9.99176025390625, 0.061475109308958054]]),
+
+
     },
     "cylinder":{
         "rRE": torch.tensor([[-0.873637855052948, -1.2119133472442627, -8.137107849121094],
@@ -175,9 +187,9 @@ def plot_curves(ys, metric_name, output_dir, figname):
     plt.tight_layout()
     plt.savefig(Path(output_dir) / f"{figname}.png")
 
-def test_collect(test_loader, model, device, output_dir, args):
+def test_collect(test_loader, model, device, output_dir, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE']):
     model.eval()
-    selected_case_id = 0  # set by default 
+    selected_case_id = 1  # set by default 
     gt_list = []
     pred_list = []
 
@@ -213,42 +225,37 @@ def test_collect(test_loader, model, device, output_dir, args):
         gt = torch.cat(gt_list, dim=0)
 
         #get error (without de-normalization)
-        cw, sw = MSE(pred,gt)  # (bs, c), (bs,)
-        mses = torch.concat([cw, sw.unsqueeze(-1)],dim=-1)
-        cw, sw = NMSE(pred,gt)
-        nmses = torch.concat([cw, sw.unsqueeze(-1)],dim=-1)
-        cw, sw = MaxError(pred,gt)
-        max_errors = torch.concat([cw, sw.unsqueeze(-1)],dim=-1)
+        collects= {}
+        for name in metric_names:
+            metric_fn = getattr(metrics, name)
+            cw, sw=metric_fn(pred, gt)
+            collects[name] = torch.concat([cw, sw.unsqueeze(-1)],dim=-1)
 
-        print("nmses shape:", nmses.shape, " (T, num_channel+1), 1 is the global")
+        print("L2RE shape:", collects["L2RE"].shape, " (T, num_channel+1), 1 is the global")
 
         if args["use_norm"]:
             (channel_min, channel_max) = args["channel_min_max"] 
             channel_min, channel_max = channel_min.to(device), channel_max.to(device)
             pred = pred*(channel_max-channel_min)+channel_min
             gt = gt*(channel_max-channel_min)+channel_min
-            cw, sw = MSE(pred,gt)  # (bs, c), (bs,)
-            mses_denorm = torch.concat([cw, sw.unsqueeze(-1)],dim=-1)
-            cw, sw = NMSE(pred,gt)
-            nmses_denorm = torch.concat([cw, sw.unsqueeze(-1)],dim=-1)
-            cw, sw = MaxError(pred,gt)
-            max_errors_denorm = torch.concat([cw, sw.unsqueeze(-1)],dim=-1)
+            for name in metric_names:
+                metric_fn = getattr(metrics, name)
+                cw, sw=metric_fn(pred, gt)
+                collects[name+"_denorm"] = torch.concat([cw, sw.unsqueeze(-1)],dim=-1)
             
-            print("nmses_denorm shape:", nmses_denorm.shape, " (T, num_channel+1), 1 is the global")
+            print("L2RE_denorm shape:", collects["L2RE_denorm"].shape, " (T, num_channel+1), 1 is the global")
 
         # saving
-        np.save(os.path.join(output_dir, 'mse.npy'), mses.cpu().numpy())
-        np.save(os.path.join(output_dir, 'nmse.npy'), nmses.cpu().numpy())
-        np.save(os.path.join(output_dir, 'max_error.npy'), max_errors.cpu().numpy())
+        for name in metric_names:
+            np.save(os.path.join(output_dir, f'{name.lower()}.npy'), collects[name].cpu().numpy())
         if args["use_norm"]:
-            np.save(os.path.join(output_dir, 'mses_denorm.npy'), mses_denorm.cpu().numpy())
-            np.save(os.path.join(output_dir, 'nmses_denorm.npy'), nmses_denorm.cpu().numpy())
-            np.save(os.path.join(output_dir, 'max_errors_denorm.npy'), max_errors_denorm.cpu().numpy())
+            for name in metric_names:
+                np.save(os.path.join(output_dir, f'{name.lower()}_denorm.npy'), collects[name+"_denorm"].cpu().numpy())
 
         # ploting for a glance
-        plot_curves(nmses[:,-1].cpu().numpy(), "NMSE", output_dir, "_".join(["nmse", args["model_name"], args["flow_name"] ,args['dataset']['case_name']]))
+        plot_curves(collects["L2RE"][:,-1].cpu().numpy(), "L2RE", output_dir, "_".join(["L2RE", args["model_name"], args["flow_name"] ,args['dataset']['case_name']]))
         if args["use_norm"]:
-            plot_curves(nmses_denorm[:,-1].cpu().numpy(), "NMSE_denorm", output_dir, "_".join(["nmse-denorm", args["model_name"], args["flow_name"] ,args['dataset']['case_name']]))
+            plot_curves(collects["L2RE_denorm"][:,-1].cpu().numpy(), "L2RE_denorm", output_dir, "_".join(["L2RE-denorm", args["model_name"], args["flow_name"] ,args['dataset']['case_name']]))
 
                       
 def main(args):
@@ -289,7 +296,6 @@ def main(args):
     if args["use_norm"]:
         channel_min, channel_max = default_minmax_channels[args["flow_name"]][dataset_args["case_name"]]
         print("use min_max normalization with min=", channel_min.tolist(), ", max=", channel_max.tolist())
-        print(channel_max, channel_min)
         args["channel_min_max"] = (channel_min, channel_max)
         test_loader.dataset.apply_norm(channel_min, channel_max)
 
