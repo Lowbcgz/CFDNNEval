@@ -35,12 +35,12 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
         case_params = case_params.to(device) #parameters [b, x1, ..., xd, p] or [b, Nx, p]
         y = y * mask
 
-        if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
+        if args["model_name"] == "OFormer":
             #Model run one_step
             if case_params.shape[-1] == 0: #darcy
                 case_params = case_params.reshape(0)
 
-            loss, pred , info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
+            loss, pred, info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
             
             optimizer.zero_grad()
             loss.backward()
@@ -49,23 +49,37 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
             train_loss += loss.item()
             train_l_inf = max(train_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
         else:
-            # Autoregressive loop
-            preds=[]
-            total_loss = 0
-            for i in range(train_loader.dataset.multi_step_size):
-                loss, pred , info= model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], loss_fn=loss_fn)
-                preds.append(pred)
-                total_loss = total_loss + loss
-                x = pred
-            preds=torch.stack(preds, dim=1)
-            _batch = preds.size(0)
-            # loss = loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1))
-            optimizer.zero_grad()
-            total_loss.backward()
-            optimizer.step()
+            if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
+                #Model run one_step
+                if case_params.shape[-1] == 0: #darcy
+                    case_params = case_params.reshape(0)
 
-            train_loss += total_loss.item()
-            train_l_inf = max(train_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+                loss, pred , info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
+                
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+                _batch = pred.size(0)
+                train_loss += loss.item()
+                train_l_inf = max(train_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+            else:
+                # Autoregressive loop
+                preds=[]
+                total_loss = 0
+                for i in range(train_loader.dataset.multi_step_size):
+                    loss, pred , info= model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], loss_fn=loss_fn)
+                    preds.append(pred)
+                    total_loss = total_loss + loss
+                    x = pred
+                preds=torch.stack(preds, dim=1)
+                _batch = preds.size(0)
+                # loss = loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1))
+                optimizer.zero_grad()
+                total_loss.backward()
+                optimizer.step()
+
+                train_loss += total_loss.item()
+                train_l_inf = max(train_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
     train_loss /= step      
     t2 = default_timer()
     return train_loss, train_l_inf, t2 - t1
@@ -94,11 +108,12 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
             y = y * mask
             
-            if getattr(val_loader.dataset,"multi_step_size", 1)==1:
+            if args["model_name"] == "OFormer":
                 # Model run
                 if case_params.shape[-1] == 0: #darcy
                     case_params = case_params.reshape(0)
                 pred = model(x, case_params, mask, grid)
+                y = y.reshape(-1, val_loader.dataset.multi_step_size, args["model"]["num_points"], y.shape[-1])
                 # Loss calculation
                 _batch = pred.size(0)
 
@@ -111,23 +126,41 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
                     cw, sw=metric_fn(pred, y)
                     res_dict["cw_res"][name].append(cw)
                     res_dict["sw_res"][name].append(sw)
-                
             else:
-                # Autoregressive loop
-                preds=[]
-                for i in range(val_loader.dataset.multi_step_size):
-                    pred = model(x, case_params, mask[:,i], grid)
-                    preds.append(pred)
-                    x = pred
-                preds=torch.stack(preds, dim=1)
-                _batch = preds.size(0)
-                val_l2 += loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1)).item()
-                val_l_inf = max(val_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
-                for name in metric_names:
-                    metric_fn = getattr(metrics, name)
-                    cw, sw=metric_fn(preds, y)
-                    res_dict["cw_res"][name].append(cw)
-                    res_dict["sw_res"][name].append(sw)
+                if getattr(val_loader.dataset,"multi_step_size", 1)==1:
+                    # Model run
+                    if case_params.shape[-1] == 0: #darcy
+                        case_params = case_params.reshape(0)
+                    pred = model(x, case_params, mask, grid)
+                    # Loss calculation
+                    _batch = pred.size(0)
+
+                    val_l2 += loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1)).item()
+                    val_l_inf = max(val_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+                    
+
+                    for name in metric_names:
+                        metric_fn = getattr(metrics, name)
+                        cw, sw=metric_fn(pred, y)
+                        res_dict["cw_res"][name].append(cw)
+                        res_dict["sw_res"][name].append(sw)
+                    
+                else:
+                    # Autoregressive loop
+                    preds=[]
+                    for i in range(val_loader.dataset.multi_step_size):
+                        pred = model(x, case_params, mask[:,i], grid)
+                        preds.append(pred)
+                        x = pred
+                    preds=torch.stack(preds, dim=1)
+                    _batch = preds.size(0)
+                    val_l2 += loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1)).item()
+                    val_l_inf = max(val_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+                    for name in metric_names:
+                        metric_fn = getattr(metrics, name)
+                        cw, sw=metric_fn(preds, y)
+                        res_dict["cw_res"][name].append(cw)
+                        res_dict["sw_res"][name].append(sw)
 
     #reshape
     for name in metric_names:
@@ -241,12 +274,16 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                 prev_case_id = case_id
             else:
                 # autoregressive loop for multi_step
-                preds=[]
-                for i in range(test_loader.dataset.multi_step_size):
-                    pred = model(x, case_params, mask[:,i], grid)
-                    preds.append(pred)
-                    x = pred
-                preds=torch.stack(preds, dim=1)
+                if args["model_name"] == "OFormer":
+                    preds=model(x, case_params, mask, grid)
+                    preds = preds*(channel_max-channel_min) + channel_min
+                else:
+                    preds=[]
+                    for i in range(test_loader.dataset.multi_step_size):
+                        pred = model(x, case_params, mask[:,i], grid)
+                        preds.append(pred)
+                        x = pred
+                    preds=torch.stack(preds, dim=1)
                 for name in metric_names:
                     metric_fn = getattr(metrics, name)
                     cw, sw=metric_fn(preds, y)
