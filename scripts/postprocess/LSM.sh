@@ -27,7 +27,7 @@
 CUDA_VISIBLE_DEVICES=0 python collect_nmse.py ./config/LSM/config_NSCH_ALL.yaml -c eps
 
 # TGV
-CUDA_VISIBLE_DEVICES=0 python collect_nmse.py ./config/LSM/config_TGV_all.yaml -c all
+CUDA_VISIBLE_DEVICES=0 python collect_nmse.py ./config/LSM/config_TGV_all.yaml -c Re_ReD
 
 # cavity
 CUDA_VISIBLE_DEVICES=0 python collect_nmse.py ./config/LSM/config_cavity_ReD_bc_re.yaml -c ReD
