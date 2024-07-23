@@ -15,8 +15,8 @@ We provide the benchmark datasets we used in the paper. The data generation conf
 This repository includes the implementation of benchmark models with the following structure:
 
 - **`./config`**: Contains model parameters organized into different YAML files based on the dataset and model.
-- **`model`**: Includes the network structure implementations for each model.
-- **`scripts`**: Contains all training and inference scripts for the benchmark models.
+- **`./model`**: Includes the network structure implementations for each model.
+- **`./scripts`**: Contains all training and inference scripts for the benchmark models.
 - **`plot.ipynb`**: Includes code for fluid field visualization.
 - **`train.py`**: Contains the training framework.
 - **`utils.py`**: Includes utility functions for data reading and network construction.
