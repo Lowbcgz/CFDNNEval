@@ -1,0 +1,96 @@
+model_name: GFormer
+flow_name: 'tube'
+if_training: False
+continue_training: False
+model_path: null
+saved_dir: "./checkpoint/"
+output_dir: "./output/"
+save_period: 10
+plot_interval: 1
+device: 'cuda:6'
+# 训练相关参数
+seed: 1127802
+training_type: "autoregressive"
+epochs: 50
+dataset:
+  flow_name: 'tube'
+  single_file: True
+  saved_folder: /data1/FluidData/cfdbench_data/tube/
+  reduced_resolution: 1
+  reduced_batch: 1
+  data_delta_time: 0.1
+  delta_time: 0.1
+  stable_state_diff: 0.001
+  norm_props: True
+  norm_bc: True  
+  # bc geo 
+  case_name: 'geo'
+  multi_step_size: 3
+dataloader:
+  train_batch_size: 16
+  val_batch_size: 16
+  test_batch_size: 1
+  num_workers: 0
+  pin_memory: False
+model:
+  node_feats: 9
+  out_dim: 2
+  model_type: 'lite' # lite, darcy, ns
+  lite: False
+  pos_dim: 2
+  n_targets: 1
+  n_hidden: 48 # 128
+  num_feat_layers: 0
+  num_encoder_layers: 4 # 6
+  n_head: 2  # 4
+  dim_feedforward: 96 # 256
+  feat_extract_type: null
+  attention_type: galerkin
+  gamma: 0.5  # strength of gradient regularizer
+  noise: 0.0
+  xavier_init: 0.01
+  diagonal_weight: 0.01
+  symmetric_init: False
+  layer_norm: False
+  attn_norm: True
+  norm_eps: 0.00001
+  batch_norm: False
+  return_attn_weight: False
+  return_latent: False
+  decoder_type: ifft2
+  spacial_dim: 2
+  spacial_fc: True
+  upsample_mode: interp
+  downsample_mode: interp
+  freq_dim: 32
+  boundary_condition: dirichlet
+  num_regressor_layers: 2
+  fourier_modes: 12
+  regressor_activation: silu
+  downscaler_activation: relu
+  upscaler_activation: silu
+  last_activation: True
+  dropout: 0.0
+  downscaler_dropout: 0.05
+  upscaler_dropout: 0.0
+  ffn_dropout: 0.05
+  encoder_dropout: 0.05
+  decoder_dropout: 0
+  debug: False
+  no-scale-factor: False  # use size instead of scale factor in interpolation
+  subsample-nodes: 3  # follow: input fine grid sampling from 421x421
+  subsample-attn: 6  # follow: input fine grid sampling from 421x421  
+# 优化器相关参数
+optimizer:
+  name: 'Adam'
+  lr: 1.e-3
+  weight_decay: 1.e-4
+# scheduler相关参数
+scheduler:
+  name: "OneCycleLR"
+  max_lr: 1.e-3
+  div_factor: 1.e-4
+  final_div_factor: 1.e-4
+  # steps_per_epoch: !!python/object/apply:len [train_loader]
+  # epochs: 100
+

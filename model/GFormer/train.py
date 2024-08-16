@@ -13,10 +13,9 @@ from utils import setup_seed, get_model, get_dataset, get_dataloader, get_min_ma
 from visualize import *
 from dataset import *
 
-sys.path.append('./model/GFormer/libs_path.py')
-from libs_path import *  
+from libs_path import *
 from libs import *
-from libs.ns_lite import *  # 导入优化器
+from libs.ns_lite import *
 
 
 def train_loop(model, train_loader, optimizer, scheduler, loss_fn, device, args):
@@ -48,8 +47,6 @@ def train_loop(model, train_loader, optimizer, scheduler, loss_fn, device, args)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            if args["model_name"] == "GFormer":
-                scheduler.step()  # step batch
             _batch = pred.size(0)
             train_loss += loss.item()
             train_l_inf = max(train_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
@@ -64,6 +61,8 @@ def train_loop(model, train_loader, optimizer, scheduler, loss_fn, device, args)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
+                if args["model_name"] == "GFormer":
+                    scheduler.step()  # step batch
                 _batch = pred.size(0)
                 train_loss += loss.item()
                 train_l_inf = max(train_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
@@ -133,6 +132,7 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
                     cw, sw=metric_fn(pred, y)
                     res_dict["cw_res"][name].append(cw)
                     res_dict["sw_res"][name].append(sw)
+
             else:
                 if getattr(val_loader.dataset,"multi_step_size", 1)==1:
                     # Model run
@@ -156,6 +156,7 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
                     # Autoregressive loop
                     preds=[]
                     for i in range(val_loader.dataset.multi_step_size):
+                        # print('x, params, mask, grid', x.shape, case_params.shape, mask[:,i].shape, grid.shape)
                         pred = model(x, case_params, mask[:,i], grid)
                         preds.append(pred)
                         x = pred
@@ -323,6 +324,8 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
         res_dict["sw_res"][name] = sw_res
 
     metrics.print_res(res_dict)
+    # print('start write:')
+    # print(os.path.join(args["output_dir"],args["model_name"]+test_type + '_results.csv'), args["flow_name"] + '_' + args['dataset']['case_name'], )
     metrics.write_res(res_dict, 
                       os.path.join(args["output_dir"],args["model_name"]+test_type + '_results.csv'),
                        args["flow_name"] + '_' + args['dataset']['case_name'], 
@@ -356,6 +359,18 @@ def main(args):
     train_data, val_data, test_data, test_ms_data = get_dataset(args)
     train_loader, val_loader, test_loader, test_ms_loader = get_dataloader(train_data, val_data, test_data, test_ms_data, args)
 
+    # for x, y, mask, case_params, grid, case_id in test_loader:
+    #     print('in test:x', x.shape)
+    #     print('y:', y.shape)
+    #     print('grid', grid.shape)
+    #     break
+
+    # for x, y, mask, case_params, grid, case_id in train_loader:
+    #     print('in train:x', x.shape)
+    #     print('y:', y.shape)
+    #     print('grid', grid.shape)
+    #     break
+
     # set some train args
     input, output, _, case_params, grid, _, = next(iter(val_loader))
     print("input tensor shape: ", input.shape[1:])
@@ -385,6 +400,7 @@ def main(args):
     if not args["if_training"]:
         print(f"Test mode, load checkpoint from {saved_path}-best.pt")
         checkpoint = torch.load(saved_path + "-best.pt")
+        # checkpoint = torch.load('/home/pengguohang/python/Fluid_bench/checkpoint/GFormer/tube_prop/GFormer_lr0.001_modellite_bs16_tube_prop-best.pt')
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)
         print("start testing...")
@@ -427,6 +443,7 @@ def main(args):
         sched_args = args["scheduler"]
         sched_name = sched_args.pop("name")
         scheduler = getattr(torch.optim.lr_scheduler, sched_name)(optimizer, last_epoch=start_epoch-1, **sched_args)
+
     # loss function
     loss_fn = nn.MSELoss(reduction="mean")
 
@@ -436,7 +453,7 @@ def main(args):
         loss_history = np.load('./log/loss/' +args["model_name"] + args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy')
         loss_history = loss_history.tolist()
 
-    # train loop
+     # train loop
     print("start training...")
     total_time = 0
     for epoch in range(start_epoch, args["epochs"]):
@@ -449,13 +466,18 @@ def main(args):
         loss_history.append(train_loss)
         print(f"[Epoch {epoch}] train_loss: {train_loss}, train_l_inf: {train_l_inf}, time_spend: {time:.3f}")
         ## save latest
+
         model_state_dict = model.module.state_dict() if torch.cuda.device_count() > 1 else model.state_dict()
+        
         torch.save({"epoch": epoch+1, "loss": min_val_loss,
             "model_state_dict": model_state_dict,
             "optimizer_state_dict": optimizer.state_dict()
             }, saved_path + "-latest.pt")
+        
+        ## 
         if (epoch+1) % args["save_period"] == 0:
             print("====================validate====================")
+            print('start valid:')
             val_l2_full, val_l_inf = val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, plot_interval=args['plot_interval'])
             print(f"[Epoch {epoch}] val_l2_full: {val_l2_full} val_l_inf: {val_l_inf}")
             print("================================================")

@@ -2,10 +2,11 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import random
-from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, UNO3d, KNO2d, KNO3d, UNet2d, UNet3d, LSM_2d_ir, geoFNO2d, Oformer
+from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, UNO3d, KNO2d, KNO3d, UNet2d, UNet3d, LSM_2d_ir, geoFNO2d, Oformer, FourierTransformer2DLite, My_FourierTransformer2D, My_FourierTransformer3D, Darcy_FourierTransformer2D
 from dataset import *
 import os
 import shutil
+from collections import defaultdict  # GFormer添加
 
 def setup_seed(seed):
     torch.manual_seed(seed)  # CPU
@@ -502,6 +503,56 @@ def get_model(spatial_dim, n_case_params, args):
                                 n_tolx=args["model"]["num_points"],
                                 multi_step_size=args["dataset"]["multi_step_size"],
                                 dim=2)
+            elif model_name == 'GFormer':
+                print('model:load GFormer------------------')
+                subsample_nodes=3
+                subsample_attn=6
+                if args['dataset']['case_name'] == 'PDEBench':
+                    n_grid = 128
+                    n_x, n_y = 128, 128
+                else:
+                    n_grid = 128
+                    n_x, n_y = 128, 128
+                fine_grid = (n_grid-1) * subsample_nodes + 1  # 逆过来求一下原始网格数(原文这里为421的原始网格)
+                n_grid_c = int(((fine_grid - 1)/subsample_attn) + 1)
+
+                args['n_x'] = n_x
+                args['n_y'] = n_y
+                model_config = args['model']
+                print('n_grid, n_grid_c', n_grid, n_grid_c)
+                # 计算升降比例
+                n_f, n_c = n_grid, n_grid_c
+                factor = np.sqrt(n_c/n_f)
+                factor = np.round(factor, 4)
+                last_digit = float(str(factor)[-1])
+                factor = np.round(factor, 3)
+                if last_digit < 5:
+                    factor += 5e-3
+                factor = int(factor/5e-3 + 5e-1 ) * 5e-3
+                down_factor = (factor, factor)
+                n_m = round(n_f*factor)-1
+                up_size = ((n_m, n_m), (n_f, n_f))
+                downsample, upsample =  down_factor, up_size
+                # 使用原始网格计算模型中的降采样、升采样大小
+                # downsample, upsample = get_scaler_sizes(n_grid, n_grid_c)
+                model_config = args['model']
+                model_config['downscaler_size'] = downsample
+                print('downsample:', downsample)
+                model_config['upscaler_size'] = upsample
+                model_config['attn_norm'] = not model_config['attn_norm']  # True
+                model_config['node_feats'] = int(model_config['node_feats'])
+                if model_config['attention_type'] == 'fourier' or n_grid < 211:
+                    model_config['norm_eps'] = 1e-7
+                elif model_config['attention_type'] == 'galerkin' and n_grid >= 211:
+                    model_config['norm_eps'] = 1e-5
+
+                torch.manual_seed(seed=args['seed'])
+                torch.cuda.manual_seed(seed=args['seed'])
+
+                torch.cuda.empty_cache()
+
+                model = Darcy_FourierTransformer2D(**model_config)
+   
         else:
             #TODO
             pass
@@ -586,6 +637,54 @@ def get_model(spatial_dim, n_case_params, args):
                                 n_tolx=args["model"]["num_points"],
                                 multi_step_size=args["dataset"]["multi_step_size"],
                                 dim=2)
+            elif model_name == 'GFormer':
+                model_config = args["model"]
+                # model 1：lite
+                if model_config['model_type']=='lite':
+                    config = defaultdict(lambda: None,
+                                #  node_feats=10+2,
+                                    node_feats=int(model_config['node_feats']),  # 重新设置12+2
+                                    pos_dim=2,
+                                    out_dim = model_config['out_dim'],
+                                    n_targets=1,
+                                    n_hidden=128,  # attention's d_model
+                                    num_feat_layers=0,
+                                    num_encoder_layers=6,
+                                    n_head=4,
+                                    dim_feedforward=256,
+                                    attention_type='galerkin',
+                                    feat_extract_type=None,
+                                    xavier_init=0.01,
+                                    diagonal_weight=0.01,
+                                    layer_norm=True,
+                                    attn_norm=False,
+                                    return_attn_weight=False,
+                                    return_latent=False,
+                                    decoder_type='ifft',
+                                    freq_dim=20,  # hidden dim in the frequency domain
+                                    num_regressor_layers=2,  # number of spectral layers
+                                    fourier_modes=12,  # number of Fourier modes
+                                    spacial_dim=2,
+                                    spacial_fc=False,
+                                    dropout=0.0,
+                                    encoder_dropout=0.0,
+                                    decoder_dropout=0.0,
+                                    ffn_dropout=0.05,
+                                    debug=False,
+                                    )
+                    torch.cuda.empty_cache()
+                    model = FourierTransformer2DLite(**config)
+                # model 2：normal
+                else:
+                    # add original setup
+                    subsample_nodes=3,
+                    subsample_attn=6,
+                    model_config['node_feats'] = int(model_config['node_feats'])
+                    model_config['norm_eps'] = 1e-5
+                    torch.manual_seed(seed=config['seed'])
+                    torch.cuda.manual_seed(seed=config['seed'])
+                    torch.cuda.empty_cache()
+                    model = My_FourierTransformer2D(**model_config)
 
         elif spatial_dim == 3:
             if model_name == "FNO":
@@ -644,6 +743,18 @@ def get_model(spatial_dim, n_case_params, args):
                         out_channels=model_args['out_channels'],
                         init_features=model_args['init_features'],
                         n_case_params = n_case_params)
+            elif model_name == 'GFormer':
+                model_config = args["model"]
+                # 3D for hills
+                model_config['attn_norm'] = not model_config['attn_norm']
+                model_config['node_feats'] = int(model_config['node_feats'])
+                model_config['norm_eps'] = 1e-5
+                torch.manual_seed(seed=config['seed'])
+                torch.cuda.manual_seed(seed=config['seed'])
+                torch.cuda.empty_cache()
+
+                model = My_FourierTransformer3D(**model_config)
+
     return model
 
 def get_min_max(dataloader):
