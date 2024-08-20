@@ -8,8 +8,9 @@ CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_tube_prop_bc_geo.yaml
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_tube_prop_bc_geo.yaml -c prop_bc_geo --test | tee ./log/test/LSM_tube_prop_bc_geo.out
 
 # TGV
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_TGV_all.yaml -c all --test | tee ./log/test/LSM_tgv_all.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_TGV_all.yaml -c single --test | tee ./log/test/LSM_tgv_single.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_TGV_all.yaml -c Re_ReD --test | tee ./log/test/LSM/LSM_tgv_Re_ReD.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_TGV_all.yaml -c Re --test | tee ./log/test/LSM/LSM_tgv_Re.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_TGV_all.yaml -c ReD --test | tee ./log/test/LSM/LSM_tgv_ReD.out
 
 # cavity
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/LSM/config_cavity_ReD_bc_re.yaml -c ReD --test | tee ./log/test/LSM_cavity_ReD.out

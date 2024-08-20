@@ -289,7 +289,16 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                     cw, sw=metric_fn(preds, y)
                     res_dict["cw_res"][name].append(cw)
                     res_dict["sw_res"][name].append(sw)
-               
+    if test_type == "accumulate" and len(preds)> 0:  # the last case
+        preds=torch.stack(preds, dim=1)   # [1, t, x1, ...,xd, v]
+        gts = torch.stack(gts, dim=1) # [1, t, x1, ...,xd, v]
+        for name in metric_names:
+            metric_fn = getattr(metrics, name)
+            cw, sw=metric_fn(preds, gts)
+            res_dict["cw_res"][name].append(cw)
+            res_dict["sw_res"][name].append(sw) 
+
+
             
     t2 = default_timer()
     Mean_inference_time = (t2-t1)/len(test_loader.dataset)
@@ -446,7 +455,7 @@ def main(args):
             scheduler.step()
         total_time += time
         loss_history.append(train_loss)
-        print(f"[Epoch {epoch}] train_loss: {train_loss}, train_l_inf: {train_l_inf}, time_spend: {time:.3f}")
+        print(f"[Epoch {epoch}] train_loss: {train_loss}, train_l_inf: {train_l_inf}, time_spend: {time:.3f}", flush=True)
         ## save latest
         model_state_dict = model.module.state_dict() if torch.cuda.device_count() > 1 else model.state_dict()
         torch.save({"epoch": epoch+1, "loss": min_val_loss,
@@ -497,5 +506,5 @@ if __name__ == "__main__":
     args["use_norm"] = args.get("use_norm", use_norm_default)
     args["if_denorm"] = not cmd_args.no_denorm
     
-    print(args)
+    print(args, flush=True)
     main(args)

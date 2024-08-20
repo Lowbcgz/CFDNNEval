@@ -7,12 +7,10 @@ saved_dir: "./checkpoint/"
 output_dir: "./output/"
 save_period: 10
 plot_interval: 1
-device: 'cuda:0'
 # 训练相关参数
 seed: 1127802
 training_type: "autoregressive"
 epochs: 50 # 150
-show-batch: False  # show batch training result
 dataset:
   flow_name: 'Darcy'
   single_file: True
