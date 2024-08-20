@@ -21,6 +21,44 @@ This repository includes the implementation of benchmark models with the followi
 - **`train.py`**: Contains the training framework.
 - **`utils.py`**: Includes utility functions for data reading and network construction.
 
+## Dependencies
+
+Create a conda environment and install dependencies:
+
+* Python 3.9
+* CUDA 11.8
+* PyTorch 2.1.2
+
+and others dependencies.
+
+```bash
+# create environment
+conda create -n CFDNNEval python=3.9
+conda activate CFDNNEval 
+
+# install pytorch
+conda install pytorch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 pytorch-cuda=11.8 -c pytorch -c nvidia
+
+# Oformer
+pip install einops
+
+# others
+pip install pyyaml h5py pandas matplotlib scikit-learn ipykernel tensorboard
+
+```
+
+## Training and testing.
+To run experiments, one should first download the datasets and correctly configure the dataset paths in the corresponding configuration files. The configuration files are in YAML format and located in the `./config` folder, organized by `model_name/fluid_name`. We have collected all scripts for training and testing in the `./scripts` folder. Overall, the training command follows the rules outlined below: 
+```bash
+python train.py `your configuration file` -c `case name`
+```
+and the testing command follows by:
+```bash
+python train.py `your configuration file` -c `case name` --test [--no_denorm]
+```
+Here, the configuration files contain the model_name and flow_name, while `-c case_name` should further select the interested physics case. The `--no_denorm` option determines if testing after the reverse normalization or not.
+
+
 ## License
 
 MIT licensed, except where otherwise stated. See `LICENSE` file.
