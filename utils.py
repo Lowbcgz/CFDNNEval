@@ -2,10 +2,11 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import random
-from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, UNO3d, KNO2d, KNO3d, UNet2d, UNet3d, LSM_2d_ir, geoFNO2d, Oformer
+from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, UNO3d, KNO2d, KNO3d, UNet2d, UNet3d, LSM_2d_ir, geoFNO2d, Oformer, FourierTransformer2DLite, My_FourierTransformer2D, My_FourierTransformer3D, Darcy_FourierTransformer2D
 from dataset import *
 import os
 import shutil
+from collections import defaultdict
 
 def setup_seed(seed):
     torch.manual_seed(seed)  # CPU
@@ -502,6 +503,51 @@ def get_model(spatial_dim, n_case_params, args):
                                 n_tolx=args["model"]["num_points"],
                                 multi_step_size=args["dataset"]["multi_step_size"],
                                 dim=2)
+            elif model_name == 'GFormer':
+                print('model:load GFormer------------------')
+                subsample_nodes=3
+                subsample_attn=6
+                if args['dataset']['case_name'] == 'PDEBench':
+                    n_grid = 128
+                    n_x, n_y = 128, 128
+                else:
+                    n_grid = 128
+                    n_x, n_y = 128, 128
+                fine_grid = (n_grid-1) * subsample_nodes + 1  # 逆过来求一下原始网格数(原文这里为421的原始网格)
+                n_grid_c = int(((fine_grid - 1)/subsample_attn) + 1)
+
+                args['n_x'] = n_x
+                args['n_y'] = n_y
+                model_config = args['model']
+                print('n_grid, n_grid_c', n_grid, n_grid_c)
+                # 计算升降比例
+                n_f, n_c = n_grid, n_grid_c
+                factor = np.sqrt(n_c/n_f)
+                factor = np.round(factor, 4)
+                last_digit = float(str(factor)[-1])
+                factor = np.round(factor, 3)
+                if last_digit < 5:
+                    factor += 5e-3
+                factor = int(factor/5e-3 + 5e-1 ) * 5e-3
+                down_factor = (factor, factor)
+                n_m = round(n_f*factor)-1
+                up_size = ((n_m, n_m), (n_f, n_f))
+                downsample, upsample =  down_factor, up_size
+                # 使用原始网格计算模型中的降采样、升采样大小
+                # downsample, upsample = get_scaler_sizes(n_grid, n_grid_c)
+                model_config = args['model']
+                model_config['downscaler_size'] = downsample
+                print('downsample:', downsample)
+                model_config['upscaler_size'] = upsample
+                model_config['attn_norm'] = not model_config['attn_norm']  # True
+                model_config['node_feats'] = int(model_config['node_feats'])
+                if model_config['attention_type'] == 'fourier' or n_grid < 211:
+                    model_config['norm_eps'] = 1e-7
+                elif model_config['attention_type'] == 'galerkin' and n_grid >= 211:
+                    model_config['norm_eps'] = 1e-5
+
+                model = Darcy_FourierTransformer2D(**model_config)
+   
         else:
             #TODO
             pass
@@ -586,6 +632,50 @@ def get_model(spatial_dim, n_case_params, args):
                                 n_tolx=args["model"]["num_points"],
                                 multi_step_size=args["dataset"]["multi_step_size"],
                                 dim=2)
+            elif model_name == 'GFormer':
+                model_config = args["model"]
+                # model 1：lite
+                if model_config['model_type']=='lite':
+                    config = defaultdict(lambda: None,
+                                #  node_feats=10+2,
+                                    node_feats=int(model_config['node_feats']),  # 重新设置12+2
+                                    pos_dim=2,
+                                    out_dim = model_config['out_dim'],
+                                    n_targets=1,
+                                    n_hidden=128,  # attention's d_model
+                                    num_feat_layers=0,
+                                    num_encoder_layers=6,
+                                    n_head=4,
+                                    dim_feedforward=256,
+                                    attention_type='galerkin',
+                                    feat_extract_type=None,
+                                    xavier_init=0.01,
+                                    diagonal_weight=0.01,
+                                    layer_norm=True,
+                                    attn_norm=False,
+                                    return_attn_weight=False,
+                                    return_latent=False,
+                                    decoder_type='ifft',
+                                    freq_dim=20,  # hidden dim in the frequency domain
+                                    num_regressor_layers=2,  # number of spectral layers
+                                    fourier_modes=12,  # number of Fourier modes
+                                    spacial_dim=2,
+                                    spacial_fc=False,
+                                    dropout=0.0,
+                                    encoder_dropout=0.0,
+                                    decoder_dropout=0.0,
+                                    ffn_dropout=0.05,
+                                    debug=False,
+                                    )
+                    model = FourierTransformer2DLite(**config)
+                # model 2：normal
+                else:
+                    # add original setup
+                    subsample_nodes=3,
+                    subsample_attn=6,
+                    model_config['node_feats'] = int(model_config['node_feats'])
+                    model_config['norm_eps'] = 1e-5
+                    model = My_FourierTransformer2D(**model_config)
 
         elif spatial_dim == 3:
             if model_name == "FNO":
@@ -644,20 +734,98 @@ def get_model(spatial_dim, n_case_params, args):
                         out_channels=model_args['out_channels'],
                         init_features=model_args['init_features'],
                         n_case_params = n_case_params)
+            elif model_name == 'GFormer':
+                model_config = args["model"]
+                # 3D for hills
+                model_config['attn_norm'] = not model_config['attn_norm']
+                model_config['node_feats'] = int(model_config['node_feats'])
+                model_config['norm_eps'] = 1e-5
+
+                model = My_FourierTransformer3D(**model_config)
+
     return model
 
-def get_min_max(dataloader):
-    for i, batch in enumerate(dataloader):
-        x = batch[0] # inputs [bs, h, w, c] or [bs, nx, c]
-        c = x.shape[-1]
-        if i == 0:  # initialize
-            channel_min, _ = x.view(-1, c).min(dim=0)
-            channel_max, _ = x.view(-1, c).max(dim=0)
-        else:
-            batch_max_value, _ = x.view(-1,c).max(dim=0)
-            batch_min_value, _ = x.view(-1,c).min(dim=0)
-            channel_min = torch.minimum(channel_min, batch_min_value)
-            channel_max = torch.maximum(channel_max, batch_max_value)
+default_minmax_channels = {
+    "cavity": {
+        "bc": torch.tensor([[-21.820903778076172, -36.05586242675781, -291.2026672363281],
+                            [34.55437469482422, 21.9743709564209, 871.6431274414062]]),
+        "re": torch.tensor([[-0.42775022983551025, -0.7351908683776855, -4.729204177856445],
+                            [0.9286726117134094, 0.40977877378463745, 4.623359680175781]]),
+        "ReD": torch.tensor([[-0.7218633890151978, -0.7597835659980774, -12.665838241577148],
+                              [0.9996216297149658, 0.45298323035240173, 18.963367462158203]]),
+        "ReD_bc_re": torch.tensor([[-21.820903778076172, -36.05586242675781, -291.2026672363281],
+                                   [34.55437469482422, 21.9743709564209, 871.6431274414062]]),
+    },
+    "tube": {
+        "bc": torch.tensor([[0.0, -0.23288129270076752],[1.496768832206726, 0.23283222317695618]]),
+        "geo": torch.tensor([[-0.00024760616361163557, -0.24431051313877106], [1.500606894493103, 0.24422840774059296]]),
+        "prop": torch.tensor([[0.0, -0.26001930236816406], [1.4960201978683472, 0.260026216506958]]),
+        "bc_geo": torch.tensor([[-0.00024760616361163557, -0.24431051313877106],[1.500606894493103, 0.24422840774059296]]),
+        "prop_bc": torch.tensor([[0.0, -0.26001930236816406],[1.496768832206726, 0.260026216506958]]),
+        "prop_geo": torch.tensor([[-0.00024760616361163557, -0.26001930236816406], [1.500606894493103, 0.260026216506958]]),
+        "prop_bc_geo": torch.tensor([[-0.00024760616361163557, -0.26001930236816406],[1.500606894493103, 0.260026216506958]]),
+    },
+    "Darcy":{
+        "darcy": torch.tensor([0.0,1.0]),
+        "PDEBench": torch.tensor([0.0,1.0])
+    },
+    "TGV":{
+        # "single": torch.tensor([0.0,1.0]),
+        "all": torch.tensor([0.0,1.0])
+    },
+    "NSCH":{
+        "ca": torch.tensor([[-1.0031050443649292, -1.0, -0.006659443024545908],
+                             [1.0169320106506348, 1.0, 0.006659443024545908]]),
+        "phi": torch.tensor([[-1.1130390167236328, -1.1014549732208252, -0.04720066860318184],
+                             [1.0230979919433594, 1.101511001586914, 0.04855911061167717]]),
+        "eps": torch.tensor([[-1.0044399499893188, -1.0, -0.013375669717788696],
+                             [1.0347859859466553, 1.0, 0.013375669717788696]]),
+        "mob": torch.tensor([[-1.0075429677963257, -1.0, -0.03635774925351143],
+                             [1.0241769552230835, 1.0, 0.03635774925351143]]),
+        "re": torch.tensor([[-1.0031670331954956, -1.003255009651184, -0.05740956962108612],
+                            [1.0175230503082275, 1.003255009651184, 0.05740956962108612]]),
+        "ibc": torch.tensor([[-1.085737943649292, -9.99176025390625, -0.061475109308958054],
+                             [1.1198190450668335, 9.99176025390625, 0.061475109308958054]]),
+
+
+    },
+    "cylinder":{
+        "rRE": torch.tensor([[-0.873637855052948, -1.2119133472442627, -8.137107849121094],
+                             [2.213331460952759, 1.185351848602295, 2.3270020484924316]])
+    },
+    "ircylinder":{
+        "irRE": torch.tensor([[-0.9188112616539001, -1.2337069511413574, -8.151810646057129],
+                              [2.2467875480651855, 1.2144097089767456, 2.6829822063446045]])
+    },
+    "hills":{
+        "rRE": torch.tensor([ [-24.633068084716797, -29.008529663085938, -12.332571029663086, -242.58314514160156],
+                             [66.42779541015625, 29.029993057250977, 25.84693717956543, 854.3807983398438]])
+    },
+    "irhills":{
+        "irRE": torch.tensor([[-27.92310333251953, -31.912891387939453, -12.819289207458496, -313.4261779785156],
+                              [66.46695709228516, 31.170812606811523, 25.986618041992188, 862.0435180664062]])
+    }
+}
+
+def get_min_max(dataloader, args):
+    flow_name = args["flow_name"]
+    case_name = args["dataset"]["case_name"]
+    if flow_name in default_minmax_channels.keys() and case_name in default_minmax_channels[flow_name].keys():
+        # get from the cache
+        channel_min, channel_max = default_minmax_channels[flow_name][case_name]
+    else:
+        # generate online
+        for i, batch in enumerate(dataloader):
+            x = batch[0] # inputs [bs, h, w, c] or [bs, nx, c]
+            c = x.shape[-1]
+            if i == 0:  # initialize
+                channel_min, _ = x.view(-1, c).min(dim=0)
+                channel_max, _ = x.view(-1, c).max(dim=0)
+            else:
+                batch_max_value, _ = x.view(-1,c).max(dim=0)
+                batch_min_value, _ = x.view(-1,c).min(dim=0)
+                channel_min = torch.minimum(channel_min, batch_min_value)
+                channel_max = torch.maximum(channel_max, batch_max_value)
     return channel_min, channel_max
 
 

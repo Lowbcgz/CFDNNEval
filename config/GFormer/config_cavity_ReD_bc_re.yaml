@@ -1,0 +1,94 @@
+model_name: GFormer
+flow_name: 'cavity'
+if_training: True
+continue_training: False
+model_path: null
+saved_dir: "./checkpoint/"
+output_dir: "./output/"
+save_period: 10
+plot_interval: 1
+device: 'cuda:1'
+# 训练相关参数
+seed: 1127802
+training_type: "autoregressive"
+epochs: 50
+show-batch: False  # show batch training result
+dataset:
+  flow_name: 'cavity'
+  single_file: True
+  saved_folder: /data1/FluidData/cavity_reduced/
+  reduced_resolution: 1
+  reduced_batch: 1
+  data_delta_time: 0.1
+  delta_time: 0.1 
+  stable_state_diff: 0.001
+  norm_props: True
+  norm_bc: True  
+  case_name: 'ReD_bc_re'  # ReD_bc_re
+  multi_step_size: 3
+dataloader:
+  train_batch_size: 16
+  val_batch_size: 16
+  test_batch_size: 1
+  num_workers: 1
+  pin_memory: False
+model:
+  node_feats: 10
+  out_dim: 3
+  model_type: 'lite' # lite, darcy, ns, 3D
+  pos_dim: 2
+  n_targets: 1
+  n_hidden: 96 # 128
+  num_feat_layers: 0
+  num_encoder_layers: 6
+  n_head: 2 # 4
+  dim_feedforward: 128 # 256
+  feat_extract_type: null
+  attention_type: galerkin
+  gamma: 0.5  # strength of gradient regularizer
+  noise: 0.0
+  xavier_init: 0.01
+  diagonal_weight: 0.01  # input diagonal weight initialization strength for Q,K,V weights (default: 0.01)
+  symmetric_init: False
+  layer_norm: False  # use the conventional layer normalization
+  attn_norm: True
+  norm_eps: 0.0000001
+  batch_norm: False
+  return_attn_weight: False
+  return_latent: False
+  decoder_type: ifft2
+  spacial_dim: 2
+  spacial_fc: True
+  upsample_mode: interp
+  downsample_mode: interp
+  freq_dim: 32
+  boundary_condition: dirichlet
+  num_regressor_layers: 2
+  fourier_modes: 12
+  regressor_activation: silu
+  downscaler_activation: relu
+  upscaler_activation: silu
+  last_activation: True
+  dropout: 0.0  # dropout before the decoder layers
+  downscaler_dropout: 0.05
+  upscaler_dropout: 0.0
+  ffn_dropout: 0.05  # dropout for the FFN in attention
+  encoder_dropout: 0.05  # dropout after the scaled dot-product in attention
+  decoder_dropout: 0  # dropout in the decoder layers
+  debug: False
+  no-scale-factor: False  # use size instead of scale factor in interpolation
+  subsample-nodes: 3  # follow: input fine grid sampling from 421x421
+  subsample-attn: 6  # follow: input fine grid sampling from 421x421
+# 优化器相关参数
+optimizer:
+  name: 'Adam'
+  lr: 1.e-3
+  weight_decay: 1.e-4
+# scheduler相关参数
+scheduler:
+  name: "OneCycleLR"  # main中默认为OneCycleLR
+  per_batch: True
+  max_lr: 1.e-3
+  div_factor: 1000
+  final_div_factor: 1000
+

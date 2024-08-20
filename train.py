@@ -10,13 +10,9 @@ import metrics
 from timeit import default_timer
 from functools import reduce
 from utils import setup_seed, get_model, get_dataset, get_dataloader, get_min_max
-from visualize import *
-from dataset import *
 
 
-
-
-def train_loop(model, train_loader, optimizer, loss_fn, device, args):
+def train_loop(model, train_loader, optimizer, batch_scheduler, loss_fn, device, args):
     model.train()
     t1 = default_timer()
     train_loss = 0
@@ -35,8 +31,8 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
         case_params = case_params.to(device) #parameters [b, x1, ..., xd, p] or [b, Nx, p]
         y = y * mask
 
-        if args["model_name"] == "OFormer":
-            #Model run one_step
+        if args["model_name"] in ["OFormer"]:
+            #Model run one_step or multi_step in latent space
             if case_params.shape[-1] == 0: #darcy
                 case_params = case_params.reshape(0)
 
@@ -77,6 +73,8 @@ def train_loop(model, train_loader, optimizer, loss_fn, device, args):
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
+                if batch_scheduler:
+                    batch_scheduler.step()  # step per batch
 
                 train_loss += total_loss.item()
                 train_l_inf = max(train_l_inf, torch.max((torch.abs(preds.reshape(_batch, -1) - y.reshape(_batch, -1)))))
@@ -108,7 +106,7 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
             y = y * mask
             
-            if args["model_name"] == "OFormer":
+            if args["model_name"] in "OFormer":
                 # Model run
                 if case_params.shape[-1] == 0: #darcy
                     case_params = case_params.reshape(0)
@@ -257,14 +255,14 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                 if test_type == 'frames':
                     for name in metric_names:
                         metric_fn = getattr(metrics, name)
-                        if args["use_norm"]:
+                        if args["use_norm"] and args["if_denorm"]:
                             cw, sw=metric_fn(pred * (channel_max - channel_min) + channel_min, y * (channel_max - channel_min) + channel_min)
                         else:
                             cw, sw=metric_fn(pred, y)
                         res_dict["cw_res"][name].append(cw)
                         res_dict["sw_res"][name].append(sw)
                 else: # accumulate
-                    if args["use_norm"]:
+                    if args["use_norm"] and args["if_denorm"]:
                         preds.append(pred * (channel_max - channel_min) + channel_min)
                         gts.append(y * (channel_max - channel_min) + channel_min) 
                     else:
@@ -274,9 +272,8 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                 prev_case_id = case_id
             else:
                 # autoregressive loop for multi_step
-                if args["model_name"] == "OFormer":
+                if args["model_name"] in ["OFormer"]:
                     preds=model(x, case_params, mask, grid)
-                    preds = preds*(channel_max-channel_min) + channel_min
                 else:
                     preds=[]
                     for i in range(test_loader.dataset.multi_step_size):
@@ -284,6 +281,9 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                         preds.append(pred)
                         x = pred
                     preds=torch.stack(preds, dim=1)
+                if args["use_norm"] and args["if_denorm"]:
+                    preds = preds * (channel_max - channel_min) + channel_min
+                    y = y * (channel_max - channel_min) + channel_min
                 for name in metric_names:
                     metric_fn = getattr(metrics, name)
                     cw, sw=metric_fn(preds, y)
@@ -316,9 +316,10 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
         res_dict["sw_res"][name] = sw_res
 
     metrics.print_res(res_dict)
+    denorm_str = '(denormed)' if args["if_denorm"] else ""
     metrics.write_res(res_dict, 
                       os.path.join(args["output_dir"],args["model_name"]+test_type + '_results.csv'),
-                       args["flow_name"] + '_' + args['dataset']['case_name'], 
+                       args["flow_name"] + '_' + args['dataset']['case_name']+ denorm_str, 
                        append = True)
     return 
 
@@ -360,7 +361,7 @@ def main(args):
     # get min_max per channel of train-set on the fly for normalization.
     
     if args["use_norm"]:
-        channel_min, channel_max = get_min_max(train_loader)   
+        channel_min, channel_max = get_min_max(train_loader, args)   
         args["channel_min_max"] = (channel_min, channel_max)
         print("use min_max normalization with min=", channel_min.tolist(), ", max=", channel_max.tolist())
         train_loader.dataset.apply_norm(channel_min, channel_max)
@@ -381,6 +382,7 @@ def main(args):
         model.load_state_dict(checkpoint["model_state_dict"])
         model.to(device)
         print("start testing...")
+        print(f"Reverse normalization = {args['if_denorm']}")
         test_loop(test_loader, model, device, output_dir, args, test_type='frames')
         if test_ms_data is not None:  # not darcy
             test_loop(test_ms_loader, model, device, output_dir, args, test_type='multi_step')
@@ -412,10 +414,20 @@ def main(args):
     if args["continue_training"]:
         start_epoch = checkpoint['epoch']
         min_val_loss = checkpoint['loss']
-    sched_args = args["scheduler"]
-    sched_name = sched_args.pop("name")
-    scheduler = getattr(torch.optim.lr_scheduler, sched_name)(optimizer, last_epoch=start_epoch-1, **sched_args)
 
+    sched_args = args["scheduler"]
+    if sched_args.get("per_batch", False):   #  batch scheduler.  # in [GFormer, ]
+        sched_name = sched_args.pop("name")
+        sched_args.pop("per_batch")
+        batch_scheduler = getattr(torch.optim.lr_scheduler, sched_name)(optimizer, total_steps=len(train_loader)*args['epochs'] ,
+                                                                        last_epoch=start_epoch*len(train_loader)-1,
+                                                                          **sched_args)
+        scheduler=None
+    else:   # epoch scheduler
+        sched_name = sched_args.pop("name")
+        scheduler = getattr(torch.optim.lr_scheduler, sched_name)(optimizer, last_epoch=start_epoch-1, **sched_args)
+        batch_scheduler = None
+        
     # loss function
     loss_fn = nn.MSELoss(reduction="mean")
 
@@ -425,12 +437,13 @@ def main(args):
         loss_history = np.load('./log/loss/' +args["model_name"] + args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy')
         loss_history = loss_history.tolist()
 
-     # train loop
+    # train loop
     print("start training...")
     total_time = 0
     for epoch in range(start_epoch, args["epochs"]):
-        train_loss, train_l_inf, time = train_loop(model,train_loader, optimizer, loss_fn, device, args)
-        scheduler.step()
+        train_loss, train_l_inf, time = train_loop(model,train_loader, optimizer, batch_scheduler, loss_fn, device, args)
+        if scheduler:  # epoch scheduler
+            scheduler.step()
         total_time += time
         loss_history.append(train_loss)
         print(f"[Epoch {epoch}] train_loss: {train_loss}, train_l_inf: {train_l_inf}, time_spend: {time:.3f}")
@@ -462,7 +475,8 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("config_file", type=str, help="Path to config file")
-    parser.add_argument("--test", action='store_true', help='test mode')
+    parser.add_argument("--test", action='store_true', help='test mode otherwise train mode')
+    parser.add_argument("--no_denorm", action='store_true', help='no denorm in test mode')
     parser.add_argument("--continue_training", action='store_true', help='continue training')
     parser.add_argument("-c", "--case_name", type=str, default="", help="For the case, if no value is entered, the yaml file shall prevail")
 
@@ -481,6 +495,7 @@ if __name__ == "__main__":
     if args["flow_name"] in ["TGV","Darcy"]:
         use_norm_default = False
     args["use_norm"] = args.get("use_norm", use_norm_default)
+    args["if_denorm"] = not cmd_args.no_denorm
+    
     print(args)
     main(args)
-# print(torch.cuda.device_count())

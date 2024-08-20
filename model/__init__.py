@@ -8,3 +8,4 @@ from .unet import *
 from .auto_deeponet import AutoDeepONet,AutoDeepONet_3d
 from .geofno import geoFNO2d
 from .oformer.oformer import Oformer
+from .GFormer.libs.ns_lite import FourierTransformer2DLite, My_FourierTransformer2D, My_FourierTransformer3D, Darcy_FourierTransformer2D
