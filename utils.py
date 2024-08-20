@@ -6,7 +6,7 @@ from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, U
 from dataset import *
 import os
 import shutil
-from collections import defaultdict  # GFormer添加
+from collections import defaultdict
 
 def setup_seed(seed):
     torch.manual_seed(seed)  # CPU
@@ -546,11 +546,6 @@ def get_model(spatial_dim, n_case_params, args):
                 elif model_config['attention_type'] == 'galerkin' and n_grid >= 211:
                     model_config['norm_eps'] = 1e-5
 
-                torch.manual_seed(seed=args['seed'])
-                torch.cuda.manual_seed(seed=args['seed'])
-
-                torch.cuda.empty_cache()
-
                 model = Darcy_FourierTransformer2D(**model_config)
    
         else:
@@ -672,7 +667,6 @@ def get_model(spatial_dim, n_case_params, args):
                                     ffn_dropout=0.05,
                                     debug=False,
                                     )
-                    torch.cuda.empty_cache()
                     model = FourierTransformer2DLite(**config)
                 # model 2：normal
                 else:
@@ -681,9 +675,6 @@ def get_model(spatial_dim, n_case_params, args):
                     subsample_attn=6,
                     model_config['node_feats'] = int(model_config['node_feats'])
                     model_config['norm_eps'] = 1e-5
-                    torch.manual_seed(seed=config['seed'])
-                    torch.cuda.manual_seed(seed=config['seed'])
-                    torch.cuda.empty_cache()
                     model = My_FourierTransformer2D(**model_config)
 
         elif spatial_dim == 3:
@@ -749,26 +740,92 @@ def get_model(spatial_dim, n_case_params, args):
                 model_config['attn_norm'] = not model_config['attn_norm']
                 model_config['node_feats'] = int(model_config['node_feats'])
                 model_config['norm_eps'] = 1e-5
-                torch.manual_seed(seed=config['seed'])
-                torch.cuda.manual_seed(seed=config['seed'])
-                torch.cuda.empty_cache()
 
                 model = My_FourierTransformer3D(**model_config)
 
     return model
 
-def get_min_max(dataloader):
-    for i, batch in enumerate(dataloader):
-        x = batch[0] # inputs [bs, h, w, c] or [bs, nx, c]
-        c = x.shape[-1]
-        if i == 0:  # initialize
-            channel_min, _ = x.view(-1, c).min(dim=0)
-            channel_max, _ = x.view(-1, c).max(dim=0)
-        else:
-            batch_max_value, _ = x.view(-1,c).max(dim=0)
-            batch_min_value, _ = x.view(-1,c).min(dim=0)
-            channel_min = torch.minimum(channel_min, batch_min_value)
-            channel_max = torch.maximum(channel_max, batch_max_value)
+default_minmax_channels = {
+    "cavity": {
+        "bc": torch.tensor([[-21.820903778076172, -36.05586242675781, -291.2026672363281],
+                            [34.55437469482422, 21.9743709564209, 871.6431274414062]]),
+        "re": torch.tensor([[-0.42775022983551025, -0.7351908683776855, -4.729204177856445],
+                            [0.9286726117134094, 0.40977877378463745, 4.623359680175781]]),
+        "ReD": torch.tensor([[-0.7218633890151978, -0.7597835659980774, -12.665838241577148],
+                              [0.9996216297149658, 0.45298323035240173, 18.963367462158203]]),
+        "ReD_bc_re": torch.tensor([[-21.820903778076172, -36.05586242675781, -291.2026672363281],
+                                   [34.55437469482422, 21.9743709564209, 871.6431274414062]]),
+    },
+    "tube": {
+        "bc": torch.tensor([[0.0, -0.23288129270076752],[1.496768832206726, 0.23283222317695618]]),
+        "geo": torch.tensor([[-0.00024760616361163557, -0.24431051313877106], [1.500606894493103, 0.24422840774059296]]),
+        "prop": torch.tensor([[0.0, -0.26001930236816406], [1.4960201978683472, 0.260026216506958]]),
+        "bc_geo": torch.tensor([[-0.00024760616361163557, -0.24431051313877106],[1.500606894493103, 0.24422840774059296]]),
+        "prop_bc": torch.tensor([[0.0, -0.26001930236816406],[1.496768832206726, 0.260026216506958]]),
+        "prop_geo": torch.tensor([[-0.00024760616361163557, -0.26001930236816406], [1.500606894493103, 0.260026216506958]]),
+        "prop_bc_geo": torch.tensor([[-0.00024760616361163557, -0.26001930236816406],[1.500606894493103, 0.260026216506958]]),
+    },
+    "Darcy":{
+        "darcy": torch.tensor([0.0,1.0]),
+        "PDEBench": torch.tensor([0.0,1.0])
+    },
+    "TGV":{
+        # "single": torch.tensor([0.0,1.0]),
+        "all": torch.tensor([0.0,1.0])
+    },
+    "NSCH":{
+        "ca": torch.tensor([[-1.0031050443649292, -1.0, -0.006659443024545908],
+                             [1.0169320106506348, 1.0, 0.006659443024545908]]),
+        "phi": torch.tensor([[-1.1130390167236328, -1.1014549732208252, -0.04720066860318184],
+                             [1.0230979919433594, 1.101511001586914, 0.04855911061167717]]),
+        "eps": torch.tensor([[-1.0044399499893188, -1.0, -0.013375669717788696],
+                             [1.0347859859466553, 1.0, 0.013375669717788696]]),
+        "mob": torch.tensor([[-1.0075429677963257, -1.0, -0.03635774925351143],
+                             [1.0241769552230835, 1.0, 0.03635774925351143]]),
+        "re": torch.tensor([[-1.0031670331954956, -1.003255009651184, -0.05740956962108612],
+                            [1.0175230503082275, 1.003255009651184, 0.05740956962108612]]),
+        "ibc": torch.tensor([[-1.085737943649292, -9.99176025390625, -0.061475109308958054],
+                             [1.1198190450668335, 9.99176025390625, 0.061475109308958054]]),
+
+
+    },
+    "cylinder":{
+        "rRE": torch.tensor([[-0.873637855052948, -1.2119133472442627, -8.137107849121094],
+                             [2.213331460952759, 1.185351848602295, 2.3270020484924316]])
+    },
+    "ircylinder":{
+        "irRE": torch.tensor([[-0.9188112616539001, -1.2337069511413574, -8.151810646057129],
+                              [2.2467875480651855, 1.2144097089767456, 2.6829822063446045]])
+    },
+    "hills":{
+        "rRE": torch.tensor([ [-24.633068084716797, -29.008529663085938, -12.332571029663086, -242.58314514160156],
+                             [66.42779541015625, 29.029993057250977, 25.84693717956543, 854.3807983398438]])
+    },
+    "irhills":{
+        "irRE": torch.tensor([[-27.92310333251953, -31.912891387939453, -12.819289207458496, -313.4261779785156],
+                              [66.46695709228516, 31.170812606811523, 25.986618041992188, 862.0435180664062]])
+    }
+}
+
+def get_min_max(dataloader, args):
+    flow_name = args["flow_name"]
+    case_name = args["dataset"]["case_name"]
+    if flow_name in default_minmax_channels.keys() and case_name in default_minmax_channels[flow_name].keys():
+        # get from the cache
+        channel_min, channel_max = default_minmax_channels[flow_name][case_name]
+    else:
+        # generate online
+        for i, batch in enumerate(dataloader):
+            x = batch[0] # inputs [bs, h, w, c] or [bs, nx, c]
+            c = x.shape[-1]
+            if i == 0:  # initialize
+                channel_min, _ = x.view(-1, c).min(dim=0)
+                channel_max, _ = x.view(-1, c).max(dim=0)
+            else:
+                batch_max_value, _ = x.view(-1,c).max(dim=0)
+                batch_min_value, _ = x.view(-1,c).min(dim=0)
+                channel_min = torch.minimum(channel_min, batch_min_value)
+                channel_max = torch.maximum(channel_max, batch_max_value)
     return channel_min, channel_max
 
 
