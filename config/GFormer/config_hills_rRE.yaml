@@ -2,7 +2,7 @@ model_name: GFormer
 flow_name: 'hills'
 if_training: True
 continue_training: False
-model_path: /home/pengguohang/anaconda3/envs/py3.8/lib/python3.8/site-packages/models/TGV_single_22_6gt_128d_qkv_32f_2024-05-20.pt
+model_path: null
 saved_dir: "./checkpoint/"
 output_dir: "./output/"
 save_period: 10
@@ -87,6 +87,8 @@ optimizer:
 # scheduler相关参数
 scheduler:
   name: "OneCycleLR"  # main中默认为OneCycleLR
-  step_size: 20
-  gamma: 0.9
+  per_batch: True
+  max_lr: 1.e-3
+  div_factor: 1000
+  final_div_factor: 1000
 

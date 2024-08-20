@@ -1,13 +1,7 @@
-try:
-    from .layers import *
-    from .utils_ft import *
-except:
-    from galerkin_transformer.layers import *
-    from galerkin_transformer.utils_ft import *
+
+from .layers import *
 
 import copy
-import os
-import sys
 from collections import defaultdict
 from typing import Optional
 
@@ -16,13 +10,7 @@ import torch.nn as nn
 from torch import Tensor
 from torch.nn import MultiheadAttention, TransformerEncoderLayer
 from torch.nn.init import constant_, xavier_uniform_
-from torchinfo import summary
-
-from .layers import SpectralConv3d, SpectralConv2d
-
-current_path = os.path.dirname(os.path.abspath(__file__))
-SRC_ROOT = os.path.dirname(current_path)
-sys.path.append(SRC_ROOT)
+# from torchinfo import summary
 
 ADDITIONAL_ATTR = ['normalizer', 'raw_laplacian', 'return_latent',
                    'residual_type', 'norm_type', 'norm_eps', 'boundary_condition',
@@ -1344,10 +1332,10 @@ if __name__ == '__main__':
         ft = SimpleTransformer(**config)
         ft.to(device)
         batch_size, seq_len = 8, 512
-        summary(ft, input_size=[(batch_size, seq_len, 1),
-                                (batch_size, seq_len, seq_len, 5),
-                                (batch_size, seq_len, 1),
-                                (batch_size, seq_len, 1)], device=device)
+        # summary(ft, input_size=[(batch_size, seq_len, 1),
+        #                         (batch_size, seq_len, seq_len, 5),
+        #                         (batch_size, seq_len, 1),
+        #                         (batch_size, seq_len, 1)], device=device)
 
     layer = TransformerEncoderLayer(d_model=128, nhead=4)
     print(layer.__class__)

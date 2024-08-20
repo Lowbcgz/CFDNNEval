@@ -88,9 +88,8 @@ optimizer:
 # scheduler相关参数
 scheduler:
   name: "OneCycleLR"
+  per_batch: True
   max_lr: 1.e-3
-  div_factor: 1.e-4
-  final_div_factor: 1.e-4
-  # steps_per_epoch: !!python/object/apply:len [train_loader]
-  # epochs: 100
+  div_factor: 1000
+  final_div_factor: 1000
 
