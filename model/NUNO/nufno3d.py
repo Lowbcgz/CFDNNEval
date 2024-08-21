@@ -4,9 +4,6 @@ import torch.nn as nn
 import numpy as np
 from tqdm import tqdm
 import torch.nn.functional as F
-# from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-# from util.utilities import *
 
 
 
@@ -26,10 +23,11 @@ def cal_grid_shape(tot_size, aspect_ratios: list[float]):
     shape = [max(int(np.round(l)), 2) for l in shape]
     return shape
 
-class NUNO_Data_utils:
+class NUNO_Data_utils_3d:
     def __init__(self) -> None:
-        pass
-    def _data_preprocessing(self, x,  grid, tree, n_subdomains=8):
+        self.tree= None
+
+    def _data_preprocessing(self, x,  grid, n_subdomains=8):
 
         """self
         Only generate KDTree for one time !!! This function will be first called in trainset. 
@@ -38,7 +36,7 @@ class NUNO_Data_utils:
         """
         from .tree import KDTree
         from scipy.interpolate import LinearNDInterpolator, \
-            NearestNDInterpolator, RegularGridInterpolator
+            NearestNDInterpolator
         with torch.no_grad():
             oversamp_ratio = 1.0
             xyz = grid                 # shape: (19517, 3)
@@ -50,15 +48,15 @@ class NUNO_Data_utils:
             # t1 = default_timer()
             point_cloud = xyz.tolist()
             # Use kd-tree to generate subdomain division
-            if tree == None:
-                tree= KDTree(
+            if self.tree == None:
+                self.tree= KDTree(
                     point_cloud, dim=3, n_subdomains=n_subdomains, 
                     n_blocks=8, return_indices=True
                 )
-                tree.solve()
+                self.tree.solve()
             # Gather subdomain info
-            bbox_sd = tree.get_subdomain_bounding_boxes()
-            indices_sd = tree.get_subdomain_indices()
+            bbox_sd = self.tree.get_subdomain_bounding_boxes()
+            indices_sd = self.tree.get_subdomain_indices()
             # Pad the point cloud of each subdomain to the same size
             max_n_points_sd = np.max([len(indices_sd[i]) 
                 for i in range(n_subdomains)])
@@ -159,10 +157,10 @@ class NUNO_Data_utils:
         #             grid_shape[0], grid_shape[2], -1)
 
         # case_params = case_params[:, 0, :].reshape(batch_size, 1, 1, 1, -1).repeat([1, grid_shape[1], grid_shape[0], grid_shape[2], 1])
-        return train_a_sd_grid, xyz_sd, input_u_sd_mask, input_point_cloud_sd, tree
+        return train_a_sd_grid, xyz_sd, input_u_sd_mask, input_point_cloud_sd
 
 # 单例模式， 只生成一次KD_tree
-data_preprocessing = NUNO_Data_utils()._data_preprocessing
+data_preprocessing = NUNO_Data_utils_3d()._data_preprocessing
 
 ################################################################
 # 3d fourier layers

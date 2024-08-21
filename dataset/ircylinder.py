@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 import os
 import torch
-from torch.utils.data import Dataset, IterableDataset
+from torch.utils.data import Dataset
 
 class IRCylinderDataset(Dataset):
     def __init__(self,
@@ -295,7 +295,6 @@ class IRCylinderDataset_NUNO(Dataset):
                     keys = list(data_group.keys())
                     keys.sort()
 
-                    tree = None
                     for case in keys:
                         cnt += 1
                         # if cnt > 2:
@@ -339,12 +338,12 @@ class IRCylinderDataset_NUNO(Dataset):
 
 
                         from model.NUNO.nufno2d import data_preprocessing
-                        case_features, grid, mask, features_cloud, tree = data_preprocessing(case_features, grid, tree, n_subdomains = 8)
+                        case_features, grid, mask, features_cloud = data_preprocessing(case_features, grid, n_subdomains = 8)
 
 
                         self.grids.append(grid)
-                        inputs = case_features[:-self.time_step_size]  # (T, nx, 3)
-                        outputs = features_cloud[self.time_step_size:]  # (T, nx, 3)
+                        inputs = case_features[:-self.time_step_size]  # (T, s1_padded, s2_padded, n_c, n_subdomains)
+                        outputs = features_cloud[self.time_step_size:]  # (T, maxlen_sd, n_subdomains, n_c)
                         assert len(inputs) == len(outputs)
 
                         num_steps = len(inputs)
@@ -352,22 +351,19 @@ class IRCylinderDataset_NUNO(Dataset):
                         # Stop when converged
                         for i in range(num_steps):
                             if i+1 >= multi_step_size:
-                                self.inputs.append(torch.tensor(inputs[i+1-multi_step_size], dtype=torch.float32))  # (nx, 3)
-                                self.labels.append(torch.tensor(outputs[i+1-multi_step_size:i+1], dtype=torch.float32))  # (multi_step, nx, 3)
+                                self.inputs.append(torch.tensor(inputs[i+1-multi_step_size], dtype=torch.float32))  # (s1_padded, s2_padded, n_subdomains, n_c)
+                                self.labels.append(torch.tensor(outputs[i+1-multi_step_size:i+1], dtype=torch.float32))  # (multi_step, maxlen_sd, n_subdomains, n_c)
                                 self.case_ids.append(idx)
                                 #######################################################
                                 #mask
                                 #If each frame has a different mask, it needs to be rewritten 
-                                self.masks.append(mask[i+1-multi_step_size:i+1, ...])
+                                self.masks.append(mask[i+1-multi_step_size:i+1, ...])  # (multi_step, maxlen_sd, n_subdomains, 1)
                         #norm props
                         if norm_props:
                             self.normalize_physics_props(this_case_params)
                         if norm_bc:
                             self.normalize_bc(this_case_params)
                         
-                        # params_keys = [
-                        #     x for x in this_case_params.keys() if x not in ["rotated", "dx", "dy"]
-                        # ]
                         params_keys = ['RE', 'vel_top']
                         case_params_vec = []
                         for k in params_keys:
@@ -378,11 +374,11 @@ class IRCylinderDataset_NUNO(Dataset):
                         idx += 1
 
         #Total frames = The sum of the number of frames for each case
-        self.inputs = torch.stack(self.inputs).float() #(Total frames, nx, 3)
-        self.labels = torch.stack(self.labels).float() #(Total frames, multi_step, nx, 3)
+        self.inputs = torch.stack(self.inputs).float() #(Total frames, s1_padded, s2_padded, n_subdomains, 3)
+        self.labels = torch.stack(self.labels).float() #(Total frames, multi_step, maxlen_sd, n_subdomains, 3)
         self.case_ids = np.array(self.case_ids) #(Total frames)
-        self.masks = torch.stack(self.masks).float() #(Total frames, nx, 1)
-        self.grids = torch.tensor(np.stack(self.grids)).float()
+        self.masks = torch.stack(self.masks).float() #(Total frames,  multi_step, maxlen_sd, n_subdomains, 1)
+        self.grids = torch.tensor(np.stack(self.grids)).float() #(Total frames, n_subdomains, maxlen_sd, 1, dim)
 
         if self.multi_step_size==1:
             self.labels = self.labels.squeeze(1)
@@ -394,7 +390,7 @@ class IRCylinderDataset_NUNO(Dataset):
             cases, p = self.case_params.shape
             _, s1, s2, _, _ = self.inputs.shape
             self.case_params = self.case_params.reshape(cases, 1, 1, p)
-            self.case_params = self.case_params.repeat(1, s1, s2, 1) #(cases, nx, p)
+            self.case_params = self.case_params.repeat(1, s1, s2, 1)  #(cases, s1_padded, s2_padded, p)
         else:
             self.case_params = torch.stack(self.case_params).float()
         
@@ -407,16 +403,6 @@ class IRCylinderDataset_NUNO(Dataset):
         self.labels = self.labels[:num_samples_max, ...]
         self.case_ids = self.case_ids[:num_samples_max, ...]
         self.masks = self.masks[:num_samples_max, ...]
-
-
-        # data prepossing for NUNO
-        # from ..model.NUNO.nufno2d import data_preprocessing
-        # inputs_sd (N_total, max_Np, 8, C)
-        # labels_sd (N_total, multi_step, max_Np, 8, C) or (N_total, max_Np, 8, C)
-        # mask_sd (N_total, multi_step, max_Np, 8, 1) or (N_total, max_Np, 8, 1)
-        # case_sd (N_total, max_Np, 8, p)
-        # grid_sd (N_total, max_NP, 8, 2)
-        # inputs_sd_grid (N_total,s1,s2, 8, C)
 
         # print(self.inputs.shape, self.labels.shape, self.case_ids.shape, self.masks.shape, self.case_params.shape)
 
@@ -443,12 +429,10 @@ class IRCylinderDataset_NUNO(Dataset):
         return len(self.inputs)
 
     def __getitem__(self, idx):
-        inputs = self.inputs[idx]               # (nx, 2) 
-        label = self.labels[idx]                # (nx, 2)
-        mask = self.masks[idx]                  # (nx, 1)
+        inputs = self.inputs[idx]               # (s1_padded, s2_padded, n_subdomains, 3)
+        label = self.labels[idx]                # (multi_step, maxlen_sd, n_subdomains, 3)
+        mask = self.masks[idx]                  # (multi_step, maxlen_sd, n_subdomains, 1)
         case_id = self.case_ids[idx]
-        case_params = self.case_params[case_id] # (nx, p)
-        grid = self.grids[case_id]
-        aux_data = torch.tensor(())              # (nx, 2)  
-        return inputs, label, mask, case_params, grid, case_id, aux_data
-        # return inputs_sd, labels_sd, mask_sd, cases_sd, grid_sd, case_id, inputs_sd_grid
+        case_params = self.case_params[case_id] # (s1_padded, s2_padded, p)
+        grid = self.grids[case_id]                 # (n_subdomains, maxlen_sd, 1, dim)
+        return inputs, label, mask, case_params, grid, case_id
