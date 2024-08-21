@@ -210,7 +210,7 @@ class IRHillsDataset(Dataset):
         grid = self.grids[case_id]              # (nx, 3)
         # print(inputs.shape, label.shape, mask.shape, case_params.shape, grid.shape, case_id)
         aux_data = torch.tensor(())
-        return inputs, label, mask, case_params, grid, case_id, aux_data
+        return inputs, label, mask, case_params, grid, case_id
 
 
 class IRHillsDataset_NUNO(Dataset):

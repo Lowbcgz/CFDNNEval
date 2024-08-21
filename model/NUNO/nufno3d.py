@@ -263,9 +263,8 @@ class NUFNO3d(nn.Module):
         self.w3 = nn.Conv3d(self.width, self.width, 1)
         self.q = MLP(self.width, self.outputs_channel*n_subdomains, self.width * 4) # output channel is 3: (u, v, w)
 
-    def forward(self, x, case_params, mask, grid, aux_data):
-        if aux_data.numel() > 0:
-            x = aux_data.clone()
+    def forward(self, x, case_params, mask, grid):
+        
         grid_samp = grid
         batch_size = x.shape[0]
         x = x.reshape(list(x.shape[:-2])+[-1])
@@ -343,9 +342,9 @@ class NUFNO3d(nn.Module):
 
         
 
-    def one_forward_step(self, x, case_params, mask,  grid, y, aux_data = torch.tensor(()), loss_fn=None, args= None):
+    def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
         info = {}
-        pred , x_next = self(x, case_params, mask, grid, aux_data)
+        pred , x_next = self(x, case_params, mask, grid)
         
         if loss_fn is not None:
             ## defined your specific loss calculations here

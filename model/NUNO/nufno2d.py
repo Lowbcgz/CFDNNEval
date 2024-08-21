@@ -251,20 +251,18 @@ class NUFNO2d(nn.Module):
         self.fc1 = nn.Linear(self.width, 128)
         self.fc2 = nn.Linear(128, outputs_channel*n_subdomains)
 
-    def forward(self, x, case_params, mask, grid, aux_data):
+    def forward(self, x, case_params, mask, grid):
         """
         inputs:
-            x:
+            x: (bs, size_x, size_y, n_subdomains, n_c)
             case_params:
             mask: (bs, maxlen_sd, n_subdomains, 1)
             grid: (bs, n_subdomains, maxlen_sd, dim )
             aux_data: () or (bs, size_x, size_y, n_subdomains, n_c)
         outputs:
-            out: (bs, maxlen_sd, n_subdomains, n_c)
-            x: (bs, size_x, size_y, n_subdomains, n_c)
+            pred: (bs, maxlen_sd, n_subdomains, n_c)
+            aux_out: (bs, size_x, size_y, n_subdomains, n_c)
         """
-        if aux_data.numel() > 0:
-            x = aux_data
         x = x.reshape(list(x.shape[:-2])+[-1])
         batch_size, size_x, size_y = x.shape[0], x.shape[1], x.shape[2]
         grid1 = self.get_grid(x.shape, x.device)
@@ -311,12 +309,13 @@ class NUFNO2d(nn.Module):
         out = u.squeeze(-1).permute(0, 2, 1)\
                     .reshape(batch_size, self.n_subdomains, -1,  self.out_channels)\
                     .permute(0, 2, 1, 3)  # (bs, maxlen_sd, n_subdomains, n_c)
-        out = out*mask
-        return out, x  # pred, aux_out
+        pred = out*mask
+        aux_out = x
+        return pred, aux_out  # pred, aux_out
 
-    def one_forward_step(self, x, case_params, mask,  grid, y, aux_data = torch.tensor(()), loss_fn=None, args= None):
+    def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
         info = {}
-        pred, x_next = self(x, case_params, mask, grid, aux_data)
+        pred, x_next = self(x, case_params, mask, grid)
         
         if loss_fn is not None:
             ## defined your specific loss calculations here

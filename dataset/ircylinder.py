@@ -214,8 +214,7 @@ class IRCylinderDataset(Dataset):
         case_id = self.case_ids[idx]
         case_params = self.case_params[case_id] # (nx, p)
         grid = self.grids[case_id]              # (nx, 2)
-        aux_data = torch.tensor(())
-        return inputs, label, mask, case_params, grid, case_id, aux_data
+        return inputs, label, mask, case_params, grid, case_id
 
 
 
