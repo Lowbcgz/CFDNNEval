@@ -248,8 +248,8 @@ class geoFNO2d(nn.Module):
         else:
             self.iphi=None
 
-    def forward(self, x, case_params, mask, cords, code=None, x_in=None, x_out=None):
-        # u (batch, Nx, d) the input value
+    def forward(self, x, case_params, mask, cords, aux_data, code=None, x_in=None, x_out=None):
+        # u (batch, Nx, d) the input value 
         # code (batch, Nx, d) the input features
         # x_in (batch, Nx, 2) the input mesh (sampling mesh)
         # xi (batch, xi1, xi2, 2) the computational mesh (uniform)
@@ -296,16 +296,16 @@ class geoFNO2d(nn.Module):
         u = self.fc1(u)
         u = F.gelu(u)
         u = self.fc2(u)
-        return u
+        return u, torch.tensor(())
 
-    def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
+    def one_forward_step(self, x, case_params, mask,  grid, y, aux_data = torch.tensor(()), loss_fn=None, args= None):
         info = {}
-        pred = self(x, case_params, mask, grid)
+        pred, aux_data = self(x, case_params, mask, grid, aux_data)
         
         if loss_fn is not None:
             ## defined your specific loss calculations here
             loss = loss_fn(pred, y)
-            return loss, pred, info
+            return loss, pred, aux_data, info
         else:
             #TODO: default loss_fn
             pass

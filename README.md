@@ -43,7 +43,7 @@ conda install pytorch==2.1.2 torchvision==0.16.2 torchaudio==2.1.2 pytorch-cuda=
 pip install einops
 
 # others
-pip install pyyaml h5py pandas matplotlib scikit-learn ipykernel tensorboard
+pip install pyyaml h5py pandas matplotlib scipy scikit-learn ipykernel tensorboard
 
 ```
 

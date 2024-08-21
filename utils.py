@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import random
-from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, UNO3d, KNO2d, KNO3d, UNet2d, UNet3d, LSM_2d_ir, geoFNO2d, Oformer, FourierTransformer2DLite, My_FourierTransformer2D, My_FourierTransformer3D, Darcy_FourierTransformer2D
+from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, UNO3d, KNO2d, KNO3d, UNet2d, UNet3d, LSM_2d_ir, geoFNO2d, Oformer,  NUFNO2d, NUFNO3d, FourierTransformer2DLite, My_FourierTransformer2D, My_FourierTransformer3D, Darcy_FourierTransformer2D
 from dataset import *
 import os
 import shutil
@@ -163,7 +163,11 @@ def get_dataset(args):
         else:
             test_ms_data = None
     elif args["flow_name"] == "ircylinder":
-        train_data = IRCylinderDataset(
+        if args["model_name"] == "NUFNO":
+            _IRCylinderDataset = IRCylinderDataset_NUNO
+        else:
+            _IRCylinderDataset = IRCylinderDataset
+        train_data = _IRCylinderDataset(
                                 filename='cylinder_train.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -174,7 +178,7 @@ def get_dataset(args):
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
-        val_data = IRCylinderDataset(
+        val_data = _IRCylinderDataset(
                                 filename='cylinder_dev.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -185,7 +189,7 @@ def get_dataset(args):
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
-        test_data = IRCylinderDataset(
+        test_data = _IRCylinderDataset(
                                 filename='cylinder_test.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -196,7 +200,7 @@ def get_dataset(args):
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
-            test_ms_data = IRCylinderDataset(
+            test_ms_data = _IRCylinderDataset(
                                     filename='cylinder_test.hdf5',
                                     saved_folder=dataset_args['saved_folder'],
                                     case_name=dataset_args['case_name'],
@@ -372,7 +376,11 @@ def get_dataset(args):
         else:
             test_ms_data = None
     elif args["flow_name"] == "irhills":
-        train_data = IRHillsDataset(
+        if args["model_name"] == "NUFNO":
+            _IRHillsDataset = IRHillsDataset_NUNO
+        else:
+            _IRHillsDataset = IRHillsDataset
+        train_data = _IRHillsDataset(
                                 filename=args['flow_name'][2:] + '_train.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -383,7 +391,7 @@ def get_dataset(args):
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
-        val_data = IRHillsDataset(
+        val_data = _IRHillsDataset(
                                 filename=args['flow_name'][2:] + '_dev.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -394,7 +402,7 @@ def get_dataset(args):
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
-        test_data = IRHillsDataset(
+        test_data = _IRHillsDataset(
                                 filename=args['flow_name'][2:] + '_test.hdf5',
                                 saved_folder=dataset_args['saved_folder'],
                                 case_name=dataset_args['case_name'],
@@ -405,7 +413,7 @@ def get_dataset(args):
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
         if dataset_args['multi_step_size'] > 1:
-            test_ms_data = IRHillsDataset(
+            test_ms_data = _IRHillsDataset(
                                     filename=args['flow_name'][2:] + '_test.hdf5',
                                     saved_folder=dataset_args['saved_folder'],
                                     case_name=dataset_args['case_name'],
@@ -562,6 +570,14 @@ def get_model(spatial_dim, n_case_params, args):
                       modes1 = model_args['modes'],
                       modes2 = model_args['modes'],
                       n_case_params = n_case_params)
+            elif model_name == "NUFNO":
+                model = NUFNO2d(inputs_channel=model_args['inputs_channel'],
+                              outputs_channel=model_args['outputs_channel'],
+                      width = model_args['width'],
+                      modes1 = model_args['modes'],
+                      modes2 = model_args['modes'],
+                      n_case_params = n_case_params,
+                      n_subdomains = model_args['n_subdomains'])
             elif model_name == "geoFNO":
                 model = geoFNO2d(inputs_channel=model_args['inputs_channel'],
                                 outputs_channel=model_args['outputs_channel'],
@@ -686,6 +702,15 @@ def get_model(spatial_dim, n_case_params, args):
                       modes2 = model_args['modes'],
                       modes3 = model_args['modes'],
                       n_case_params = n_case_params)
+            elif model_name == "NUFNO":
+                model = NUFNO3d(inputs_channel=model_args['inputs_channel'],
+                              outputs_channel=model_args['outputs_channel'],
+                      width = model_args['width'],
+                      modes1 = model_args['modes'],
+                      modes2 = model_args['modes'],
+                      modes3 = model_args['modes'],
+                      n_case_params = n_case_params,
+                      n_subdomains = model_args['n_subdomains'])
             elif model_name == "LSM":
                 if model_args["irregular_geo"]:
                     raise NotImplementedError("LSM for 3D is not implemented for irregular geometry yet.")

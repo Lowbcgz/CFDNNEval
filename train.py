@@ -32,10 +32,9 @@ def train_loop(model, train_loader, optimizer, batch_scheduler, loss_fn, device,
         y = y * mask
 
         if args["model_name"] in ["OFormer"]:
-            #Model run one_step or multi_step in latent space
+            #Model run one_step or multi_step in the latent space
             if case_params.shape[-1] == 0: #darcy
                 case_params = case_params.reshape(0)
-
             loss, pred, info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
             
             optimizer.zero_grad()
@@ -44,13 +43,17 @@ def train_loop(model, train_loader, optimizer, batch_scheduler, loss_fn, device,
             _batch = pred.size(0)
             train_loss += loss.item()
             train_l_inf = max(train_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
+            
         else:
             if getattr(train_loader.dataset,"multi_step_size", 1) ==1:
                 #Model run one_step
                 if case_params.shape[-1] == 0: #darcy
                     case_params = case_params.reshape(0)
 
-                loss, pred , info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
+                if args["model_name"] in ["NUFNO"]:  # have auxliary output
+                    loss, pred , aux_out, info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
+                else:
+                    loss, pred , info = model.one_forward_step(x, case_params, mask,  grid, y, loss_fn=loss_fn) 
                 
                 optimizer.zero_grad()
                 loss.backward()
@@ -63,10 +66,16 @@ def train_loop(model, train_loader, optimizer, batch_scheduler, loss_fn, device,
                 preds=[]
                 total_loss = 0
                 for i in range(train_loader.dataset.multi_step_size):
-                    loss, pred , info= model.one_forward_step(x, case_params, mask[:,i], grid, y[:,i], loss_fn=loss_fn)
+                    if args["model_name"] in ["NUFNO"]:  # have auxliary output as next input, since its input and output are incompatible.
+                        loss, pred , aux_out, info = model.one_forward_step(x, case_params, mask[:,i],  grid, y[:,i], loss_fn=loss_fn)
+                        x = aux_out
+                    else:
+                        loss, pred , info = model.one_forward_step(x, case_params, mask[:,i],  grid, y[:,i], loss_fn=loss_fn)
+                        x = pred
+                    
                     preds.append(pred)
                     total_loss = total_loss + loss
-                    x = pred
+                    
                 preds=torch.stack(preds, dim=1)
                 _batch = preds.size(0)
                 # loss = loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1))
@@ -105,13 +114,15 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
             mask = mask.to(device) # mask [b, x1, ..., xd, 1]
             case_params = case_params.to(device) #parameters [b, x1, ..., xd, p]
             y = y * mask
-            
-            if args["model_name"] in "OFormer":
-                # Model run
+
+            if args["model_name"] in ["OFormer"]:
+                # Model run in the latent space
                 if case_params.shape[-1] == 0: #darcy
                     case_params = case_params.reshape(0)
                 pred = model(x, case_params, mask, grid)
                 y = y.reshape(-1, val_loader.dataset.multi_step_size, args["model"]["num_points"], y.shape[-1])
+                
+                
                 # Loss calculation
                 _batch = pred.size(0)
 
@@ -124,19 +135,23 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
                     cw, sw=metric_fn(pred, y)
                     res_dict["cw_res"][name].append(cw)
                     res_dict["sw_res"][name].append(sw)
+
             else:
                 if getattr(val_loader.dataset,"multi_step_size", 1)==1:
                     # Model run
                     if case_params.shape[-1] == 0: #darcy
                         case_params = case_params.reshape(0)
-                    pred = model(x, case_params, mask, grid)
+
+                    if args["model_name"] in ["NUFNO"]:
+                        pred, aux_out = model(x, case_params, mask, grid)
+                    else:
+                        pred = model(x, case_params, mask, grid)
+
                     # Loss calculation
                     _batch = pred.size(0)
-
                     val_l2 += loss_fn(pred.reshape(_batch, -1), y.reshape(_batch, -1)).item()
                     val_l_inf = max(val_l_inf, torch.max((torch.abs(pred.reshape(_batch, -1) - y.reshape(_batch, -1)))))
                     
-
                     for name in metric_names:
                         metric_fn = getattr(metrics, name)
                         cw, sw=metric_fn(pred, y)
@@ -147,9 +162,15 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
                     # Autoregressive loop
                     preds=[]
                     for i in range(val_loader.dataset.multi_step_size):
-                        pred = model(x, case_params, mask[:,i], grid)
+                        if args["model_name"] in ["NUFNO"]:
+                            pred, aux_out = model(x, case_params, mask[:,i], grid)
+                            x = aux_out
+                        else:
+                            pred = model(x, case_params, mask[:,i], grid)
+                            x = pred
+
                         preds.append(pred)
-                        x = pred
+                        
                     preds=torch.stack(preds, dim=1)
                     _batch = preds.size(0)
                     val_l2 += loss_fn(preds.reshape(_batch, -1), y.reshape(_batch, -1)).item()
@@ -160,7 +181,7 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
                         res_dict["cw_res"][name].append(cw)
                         res_dict["sw_res"][name].append(sw)
 
-    #reshape
+    #aggregation
     for name in metric_names:
         cw_res_list = res_dict["cw_res"][name]
         sw_res_list = res_dict["sw_res"][name]
@@ -181,6 +202,7 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
     val_l2 /= step
 
     return val_l2, val_l_inf
+
 
 def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE'], plot_interval = 10, test_type = 'frames'):
     model.eval()
@@ -209,6 +231,7 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
     prev_case_id = -1
     preds = []
     gts = []
+    aux_data = torch.tensor(())
     t1 = default_timer()
     with torch.no_grad():
         for x, y, mask, case_params, grid, case_id in test_loader:
@@ -228,14 +251,14 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
             if getattr(test_loader.dataset,"multi_step_size", 1) ==1:
                 # batch_size = x.size(0)
                 if test_type == 'frames':
-                    # x = x.to(device) # x: input tensor (The previous time step grand truth data) [b, x1, ..., xd, v]
                     pass
                 elif test_type == 'accumulate': 
                     if prev_case_id == -1:
                         # new case start
                         if len(preds)> 0: 
-                            preds=torch.stack(preds, dim=1)   # [1, t, x1, ...,xd, v]
-                            gts = torch.stack(gts, dim=1) # [1, t, x1, ...,xd, v]
+                            preds=torch.stack(preds, dim=0).unsqueeze(0)   # [1, t, x1, ...,xd, v]
+                            # print(preds.shape)
+                            gts = torch.stack(gts, dim=0).unsqueeze(0) # [1, t, x1, ...,xd, v]
                             for name in metric_names:
                                 metric_fn = getattr(metrics, name)
                                 cw, sw=metric_fn(preds, gts)
@@ -245,13 +268,21 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                         preds = []
                         gts = []
                     else:
-                        x = pred.detach().clone() # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
+                        if args["model_name"] in ["NUFNO"]:
+                            x = aux_out.detach()  # aux_out as next input, since the preds is incompatible with inputs 
+                        else:
+                            x = pred.detach() # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
+                        
                 else:
                     raise Exception(f"test_type {test_type} is not support for a single_step test_loader ")
-                
-                pred = model(x, case_params, mask, grid)
 
-                #collect data, need to reverse normalization
+
+                if args["model_name"] in ["NUFNO"]:
+                    pred, aux_out = model(x, case_params, mask, grid)
+                else: 
+                    pred = model(x, case_params, mask, grid)
+
+                #collect data, support reverse normalization
                 if test_type == 'frames':
                     for name in metric_names:
                         metric_fn = getattr(metrics, name)
@@ -277,9 +308,14 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                 else:
                     preds=[]
                     for i in range(test_loader.dataset.multi_step_size):
-                        pred = model(x, case_params, mask[:,i], grid)
+                        if args["model_name"] in ["NUFNO"]:
+                            pred, aux_out = model(x, case_params, mask[:,i], grid)
+                            x = aux_out
+                        else:
+                            pred = model(x, case_params, mask[:,i], grid)
+                            x = pred
                         preds.append(pred)
-                        x = pred
+                        
                     preds=torch.stack(preds, dim=1)
                 if args["use_norm"] and args["if_denorm"]:
                     preds = preds * (channel_max - channel_min) + channel_min
@@ -332,6 +368,8 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                        append = True)
     return 
 
+
+
 def main(args):
     #init
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -360,7 +398,7 @@ def main(args):
     train_loader, val_loader, test_loader, test_ms_loader = get_dataloader(train_data, val_data, test_data, test_ms_data, args)
 
     # set some train args
-    input, output, _, case_params, grid, _, = next(iter(val_loader))
+    input, output, _, case_params, grid, _, _ = next(iter(val_loader))
     print("input tensor shape: ", input.shape[1:])
     print("output tensor shape: ", output.shape[1:] if val_loader.dataset.multi_step_size==1 else output.shape[2:])
     spatial_dim = grid.shape[-1]
@@ -378,6 +416,7 @@ def main(args):
         test_loader.dataset.apply_norm(channel_min, channel_max)
         if test_ms_data is not None:
             test_ms_loader.dataset.apply_norm(channel_min, channel_max)
+        print("min-max normalization finished")
 
     #model
     model = get_model(spatial_dim, n_case_params, args)
@@ -404,6 +443,8 @@ def main(args):
         checkpoint = torch.load(saved_path + "-latest.pt")
         model.load_state_dict(checkpoint["model_state_dict"])
         print("loading latest checkpoint from ", saved_path + "-latest.pt")
+        
+
     model.to(device) 
     model.train()
 
@@ -440,11 +481,10 @@ def main(args):
     # loss function
     loss_fn = nn.MSELoss(reduction="mean")
 
-    # save loss history
+    # loss history
     loss_history = []
     if args["continue_training"]:
-        loss_history = np.load('./log/loss/' +args["model_name"] + args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy')
-        loss_history = loss_history.tolist()
+        loss_history = checkpoint["history"]
 
     # train loop
     print("start training...")
@@ -455,12 +495,14 @@ def main(args):
             scheduler.step()
         total_time += time
         loss_history.append(train_loss)
-        print(f"[Epoch {epoch}] train_loss: {train_loss}, train_l_inf: {train_l_inf}, time_spend: {time:.3f}", flush=True)
+        print(f"[Epoch {epoch}] train_loss: {train_loss}, train_l_inf: {train_l_inf}, time_spend: {time:.3f}")
         ## save latest
         model_state_dict = model.module.state_dict() if torch.cuda.device_count() > 1 else model.state_dict()
+        
         torch.save({"epoch": epoch+1, "loss": min_val_loss,
             "model_state_dict": model_state_dict,
-            "optimizer_state_dict": optimizer.state_dict()
+            "optimizer_state_dict": optimizer.state_dict(),
+            "history": loss_history
             }, saved_path + "-latest.pt")
         if (epoch+1) % args["save_period"] == 0:
             print("====================validate====================")
@@ -475,10 +517,6 @@ def main(args):
                     "optimizer_state_dict": optimizer.state_dict()
                     }, saved_path + "-best.pt")
     print("Done.")
-    loss_history = np.array(loss_history)
-    if not os.path.exists('./log/loss/'):
-        os.makedirs('./log/loss/')
-    np.save('./log/loss/' + args["model_name"]+args['flow_name'] + '_' + args['dataset']['case_name'] + '_loss_history.npy', loss_history)
     print("avg_time : {0:.5f}".format(total_time / (args["epochs"] - start_epoch)))
 
 if __name__ == "__main__":
