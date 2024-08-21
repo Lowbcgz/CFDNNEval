@@ -19,7 +19,7 @@ dataset:
   reduced_batch: 1
   norm_props: True
   stable_state_diff: 0.0001
-  case_name: 'all' # or 'single'
+  case_name: 'Re_ReD'
   multi_step_size: 3
 # dataloader相关参数
 dataloader:

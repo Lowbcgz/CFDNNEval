@@ -8,8 +8,9 @@ CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_tube_prop_bc_geo
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_tube_prop_bc_geo.yaml -c prop_bc_geo --test | tee ./log/test/DeepONet_tube_prop_bc_geo.out
 
 # # TGV
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_TGV_all.yaml -c all --test | tee ./log/test/DeepONet_tgv_all.out
-CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_TGV_all.yaml -c single --test | tee ./log/test/DeepONet_tgv_single.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_TGV_all.yaml -c Re_ReD --test | tee ./log/test/DeepONet_tgv_Re_ReD.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_TGV_all.yaml -c Re --test | tee ./log/test/DeepONet_tgv_Re.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_TGV_all.yaml -c ReD --test | tee ./log/test/DeepONet_tgv_ReD.out
 
 # # cavity
 CUDA_VISIBLE_DEVICES=0 python train.py ./config/DeepONet/config_cavity_ReD_bc_re.yaml -c ReD --test | tee ./log/test/DeepONet_cavity_ReD.out

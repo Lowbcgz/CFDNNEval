@@ -14,26 +14,24 @@ CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_tube_prop_bc_geo.yam
 CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_tube_prop_bc_geo.yaml -c prop_bc_geo | tee ./log/UNet/train/UNet_tube_prop_bc_geo.out
 
 # TGV
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_TGV_all.yaml -c all | tee ./log/UNet/train/UNet_tgv_all.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_TGV_all.yaml -c single | tee ./log/UNet/train/UNet_tgv_single.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_TGV_all.yaml -c Re_ReD | tee ./log/UNet/train/UNet_tgv_Re_ReD.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_TGV_all.yaml -c Re | tee ./log/UNet/train/UNet_tgv_Re.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_TGV_all.yaml -c ReD | tee ./log/UNet/train/UNet_tgv_ReD.out
 
 # NSCH
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c bc | tee ./log/UNet/train/UNet_nsch_bc.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c ca | tee ./log/UNet/train/UNet_nsch_ca.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c mob | tee ./log/UNet/train/UNet_nsch_mob.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c phi | tee ./log/UNet/train/UNet_nsch_phi.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c pre | tee ./log/UNet/train/UNet_nsch_pre.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c re | tee ./log/UNet/train/UNet_nsch_re.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c uv0 | tee ./log/UNet/train/UNet_nsch_uv0.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c bc_ca_mob_phi_pre_re_uv0 | tee ./log/UNet/train/UNet_nsch_bc_ca_mob_phi_pre_re_uv0.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c ca_mob_re | tee ./log/UNet/train/UNet_nsch_ca_mob_re.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_NSCH_ALL.yaml -c phi_pre_uv0 | tee ./log/UNet/train/UNet_nsch_phi_pre_uv0.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_NSCH_ALL.yaml -c ibc | tee ./log/UNet/train/UNet_nsch_ibc.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_NSCH_ALL.yaml -c ca | tee ./log/UNet/train/UNet_nsch_ca.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_NSCH_ALL.yaml -c mob | tee ./log/UNet/train/UNet_nsch_mob.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_NSCH_ALL.yaml -c phi | tee ./log/UNet/train/UNet_nsch_phi.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_NSCH_ALL.yaml -c re | tee ./log/UNet/train/UNet_nsch_re.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_NSCH_ALL.yaml -c eps | tee ./log/UNet/train/UNet_nsch_eps.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_NSCH_ALL.yaml -c ibc_phi_ca_mob_re_eps | tee ./log/UNet/train/UNet_ibc_phi_ca_mob_re_eps.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_NSCH_ALL.yaml -c ca_mob_re_eps | tee ./log/UNet/train/UNet_nsch_ca_mob_re_eps.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_NSCH_ALL.yaml -c phi_ibc | tee ./log/UNet/train/UNet_nsch_phi_ibc.out
 
 # Darcy
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_Darcy_ar_as.yaml -c ar | tee ./log/UNet/train/UNet_darcy_ar.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_Darcy_ar_as.yaml -c as | tee ./log/UNet/train/UNet_darcy_as.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_Darcy_ar_as.yaml -c as_ar | tee ./log/UNet/train/UNet_darcy_as_ar.out
-CUDA_VISIBLE_DEVICES=6 python train.py ./config/UNet/config_Darcy_PDEBench.yaml -c PDEBench | tee ./log/UNet/train/UNO_PDEBench.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_Darcy_PDEBench.yaml -c PDEBench | tee ./log/UNet/train/UNet_darcy_PDEBench.out
+CUDA_VISIBLE_DEVICES=0 python train.py ./config/UNet/config_Darcy_darcy.yaml -c darcy | tee ./log/UNet/train/UNet_darcy_darcy.out
 
 # cylinder
 CUDA_VISIBLE_DEVICES=3 python train.py ./config/UNet/config_cylinder_rRE_rBC.yaml -c rRE_rBC | tee ./log/UNet/train/UNet_cylinder_rRE_rBC.out
