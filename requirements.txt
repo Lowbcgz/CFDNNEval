@@ -1,9 +1,0 @@
-# torch
-numpy
-pandas
-matplotlib
-h5py
-pyyaml
-scikit-learn
-scipy
-einops
