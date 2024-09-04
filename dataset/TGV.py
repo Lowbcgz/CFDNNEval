@@ -3,11 +3,12 @@ from torch.utils.data import Dataset
 import h5py
 import os
 import numpy as np
+
 class TGVDataset(Dataset):
     def __init__(self,
                  filename,
                  saved_folder='../data/',
-                 case_name = 'Re_ReD',
+                 case_name = 'all',
                  reduced_resolution = 1,
                  reduced_batch = 1,
                  num_samples_max = -1,
@@ -31,7 +32,7 @@ class TGVDataset(Dataset):
         edge_list=[]
         nu_list=[]
         rho_list=[]
-        root_path = os.path.abspath(saved_folder + filename)
+        root_path = os.path.join(saved_folder, filename)
         with h5py.File(root_path, 'r') as f:
             # collect data
             for name in f.keys():
@@ -68,14 +69,14 @@ class TGVDataset(Dataset):
             num_steps = len(inputs)
             for t in range(num_steps):
                 if np.isnan(inputs[t]).any() or np.isnan(outputs[t]).any():
-                    print(f"Invalid frame {t} in case {i}")
+                    # print(f"Invalid frame {t} in case {i}")
                     break
                 inp_magn = np.sqrt(np.sum(inputs[t] ** 2, axis=-1))
                 out_magn = np.sqrt(np.sum(outputs[t] ** 2, axis=-1))
                 
                 diff = np.abs(inp_magn - out_magn).mean()
                 if diff < stable_state_diff:
-                    print(f"Converged at {t} in case {i}")
+                    # print(f"Converged at {t} in case {i}")
                     break
                 
                 if t+1 >= multi_step_size:
@@ -129,10 +130,7 @@ class TGVDataset(Dataset):
         """
         physic_prop = physic_prop/np.array([1000.0,15.707,1.0])  #re,edge,nu
         
-    def apply_norm(self, channel_min, channel_max):
-        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
-        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
-
+    
     def __len__(self):
         return len(self.inputs)
 

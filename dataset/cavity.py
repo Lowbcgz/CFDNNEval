@@ -20,7 +20,6 @@ class CavityDataset(Dataset):
                  reshape_parameters = True,
                  multi_step_size = 1,
                  ):
-        
         '''
         Args:
             filename(str): the file name of dataset, such as "tube_dev.hdf5"
@@ -114,10 +113,10 @@ class CavityDataset(Dataset):
                             out_magn = torch.sqrt(out[:,:,0] ** 2 + out[:,:,1] ** 2 + out[:,:,2] ** 2)
                             diff = torch.abs(inp_magn - out_magn).mean()
                             if diff < stable_state_diff and i / num_steps > 1 / 10:
-                                print(
-                                    f"Converged at {i} out of {num_steps},"
-                                    f" {this_case_params}"
-                                )
+                                # print(
+                                #     f"Converged at {i} out of {num_steps},"
+                                #     f" {this_case_params}"
+                                # )
                                 break
                             assert not torch.isnan(inp).any()
                             assert not torch.isnan(out).any()
@@ -176,11 +175,9 @@ class CavityDataset(Dataset):
         self.labels = self.labels[:num_samples_max, ...]
         self.case_ids = self.case_ids[:num_samples_max, ...]
         self.masks = self.masks[:num_samples_max, ...]
+
         # print(self.inputs.shape, self.labels.shape, self.case_ids.shape, self.masks.shape, self.case_params.shape)
-    
-    def apply_norm(self, channel_min, channel_max):
-        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
-        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
+
     def normalize_physics_props(self, case_params):
         """
         Normalize the physics properties in-place.

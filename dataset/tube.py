@@ -2,7 +2,6 @@ import os
 import h5py
 import numpy as np
 import torch
-import random
 from torch.utils.data import Dataset
 
 class TubeDataset(Dataset):
@@ -126,10 +125,10 @@ class TubeDataset(Dataset):
                             out_magn = torch.sqrt(out[:,:,0] ** 2 + out[:,:,1] ** 2)
                             diff = torch.abs(inp_magn - out_magn).mean()
                             if diff < stable_state_diff:
-                                print(
-                                    f"Converged at {i} out of {num_steps},"
-                                    f" {this_case_params}"
-                                )
+                                # print(
+                                #     f"Converged at {i} out of {num_steps},"
+                                #     f" {this_case_params}"
+                                # )
                                 break
                             assert not torch.isnan(inp).any()
                             assert not torch.isnan(out).any()
@@ -207,9 +206,6 @@ class TubeDataset(Dataset):
         """
         case_params['vel_in'] = (case_params['vel_in'] - 1.4371428489685059) / 1.0663825273513794
     
-    def apply_norm(self, channel_min, channel_max):
-        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
-        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
     def __len__(self):
         return len(self.inputs)
 

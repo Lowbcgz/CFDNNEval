@@ -1,0 +1,43 @@
+flow_name: "regular_hills"
+model_name: "gnot"
+if_training: True
+continue_training: False
+model_path: None
+tensorboard: True
+saved_dir: "./checkpoint/"
+output_dir: "./log/tensorboard/"
+save_period: 2
+seed: 0
+# training args
+training_type: "autoregressive" # "single_step"
+epochs: 25
+dataset:
+  saved_folder: "/data1/FluidData/periodic_hills"
+  case_name: "rRE"
+  reduced_resolution: 2
+  reduced_batch: 1
+  delta_time: 0.1
+  multi_step_size: 3
+dataloader:
+  batch_size: 2
+  num_workers: 0
+  pin_memory: False
+model:
+  trunk_size: 4 # space_dim+num_case_params
+  branch_sizes: [7] # space_dim+input_size
+  space_dim: 3
+  output_size: 4
+  n_layers: 3 # the number of attention layers
+  n_hidden: 96 # the number of feature dims
+  n_head: 4 # the number of heads
+  n_experts: 1 # the number of experts
+  n_inner: 4
+  mlp_layers: 3 # the number of layers in trunk mlp and output mlp
+optimizer:
+  name: AdamW
+  lr: 0.001
+  weight_decay: 0.00005
+scheduler:
+  name: "StepLR"
+  step_size: 5
+  gamma: 0.5

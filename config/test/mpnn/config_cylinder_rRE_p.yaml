@@ -1,0 +1,46 @@
+flow_name: "regular_cylinder"
+model_name: "mpnn"
+if_training: False
+continue_training: False
+model_path: None
+tensorboard: False
+saved_dir: "./checkpoint"
+output_dir: "./log/tensorboard"
+save_period: 5
+seed: 0
+# training args
+training_type: "autoregressive" # "single_step"
+epochs: 50
+dataset:
+  saved_folder: "/data1/FluidData/cylinder_reduced"
+  case_name: "rRE"
+  reduced_resolution: 1
+  reduced_batch: 1
+  data_delta_time: 0.1
+  delta_time: 0.1
+  num_samples_max: -1
+  stable_state_diff: 0.0001
+  norm_props: True
+  norm_bc: True
+  reshape_parameters: True
+  multi_step_size: 3
+dataloader:
+  batch_size: 8
+  num_workers: 1
+  pin_memory: False
+model:
+  neighbors: 1
+  delta_t: 0.1
+  hidden_features: 128
+  hidden_layers: 6
+  n_params: 2
+  var_id: 2 # u: 0, v: 1, ...
+  spatial_dim: 2
+optimizer:
+  name: AdamW
+  lr: 0.001
+  weight_decay: 1.e-8
+scheduler:
+  name: "StepLR"
+  step_size: 10
+  gamma: 0.5

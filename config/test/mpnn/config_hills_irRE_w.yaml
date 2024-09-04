@@ -1,0 +1,40 @@
+flow_name: "hills"
+model_name: "mpnn_irregular"
+if_training: False
+continue_training: False
+model_path: None
+tensorboard: False
+saved_dir: "./checkpoint"
+output_dir: "./log/tensorboard"
+save_period: 2
+seed: 0
+# training args
+training_type: "autoregressive" # "single_step"
+epochs: 25
+dataset:
+  saved_folder: "/data1/FluidData/periodic_hills"
+  case_name: "irRE"
+  reduced_resolution: 1
+  reduced_batch: 1
+  delta_time: 0.1
+  multi_step_size: 3
+dataloader:
+  batch_size: 4
+  num_workers: 0
+  pin_memory: False
+model:
+  neighbors: 1
+  delta_t: 0.1
+  hidden_features: 128
+  hidden_layers: 6
+  n_params: 1
+  var_id: 2 # u: 0, v: 1, ...
+  spatial_dim: 3
+optimizer:
+  name: AdamW
+  lr: 0.001
+  weight_decay: 1.e-8
+scheduler:
+  name: "StepLR"
+  step_size: 5
+  gamma: 0.5

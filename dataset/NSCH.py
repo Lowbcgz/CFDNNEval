@@ -17,7 +17,6 @@ class NSCHDataset(Dataset):
                  reshape_parameters = True,
                  multi_step_size = 1,
                  ):
-        
         '''
         Args:
             filename(str): the file name of dataset, such as "tube_dev.hdf5"
@@ -84,14 +83,14 @@ class NSCHDataset(Dataset):
             num_steps = len(inputs)
             for t in range(num_steps):
                 if np.isnan(inputs[t]).any() or np.isnan(outputs[t]).any():
-                    print(f"Invalid frame {t} in case {i}")
+                    # print(f"Invalid frame {t} in case {i}")
                     break
                 inp_magn = np.sqrt(np.sum(inputs[t, :, :, 2:] ** 2, axis=-1))
                 out_magn = np.sqrt(np.sum(outputs[t, :, :, 2:] ** 2, axis=-1))
                 # out_magn = np.sqrt(outputs[t, :, :, 3] ** 2 + outputs[t, :, :, 4] ** 2)
                 diff = np.abs(inp_magn - out_magn).mean()
                 if diff < stable_state_diff:
-                    print(f"Converged at {t} in case {i}")
+                    # print(f"Converged at {t} in case {i}")
                     break
                 
                 if t+1 >= multi_step_size:
@@ -134,10 +133,7 @@ class NSCHDataset(Dataset):
         """
         physic_prop = physic_prop/np.array([100.0,100.0,1.0,0.1])  # cas, res, mobs, eps
         
-    def apply_norm(self, channel_min, channel_max):
-        self.inputs = (self.inputs - channel_min) / (channel_max - channel_min)
-        self.labels = (self.labels - channel_min) / (channel_max - channel_min)
-
+    
     def __len__(self):
         return len(self.inputs)
 
