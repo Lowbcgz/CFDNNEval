@@ -8,7 +8,8 @@ import yaml
 from timeit import default_timer
 
 import metrics
-from utils import *
+from utils import setup_seed, get_dataset, get_model, get_model_name, get_min_max
+# from utils import 
 
 METRICS = ['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE']
 

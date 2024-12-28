@@ -6,11 +6,14 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import yaml
 from timeit import default_timer
+from tqdm import tqdm
 
 import metrics
-from utils import *
+from utils import setup_seed, get_test_dataset, get_model, append_results
+
 
 METRICS = ['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE']
+
 
 def test_loop(test_loader, model, args, metric_names=METRICS, test_type="accumulate"):
     assert test_type in ["frame", "accumulate"]
@@ -30,7 +33,7 @@ def test_loop(test_loader, model, args, metric_names=METRICS, test_type="accumul
         channel_min, channel_max = channel_min.to(device), channel_max.to(device)
 
     t1 = default_timer()
-    for x, y, mask, case_params, grid, case_id in test_loader:
+    for x, y, mask, case_params, grid, case_id in tqdm(test_loader):
         if prev_case_id != case_id:
             if prev_case_id != -1: # compute metric here
                 t2 = default_timer()
@@ -132,8 +135,36 @@ def main(args):
     # test
     print("Start testing.")
     res_dict = test_loop(test_loader, model, args, test_type=cmd_args.test_type)
+
+    # print results
     for k in res_dict:
         print(f"{k}: {res_dict[k]}")
+
+    # save results
+    if cmd_args.save_result:
+        result_path = os.path.join(cmd_args.result_root, f"{args['model_name']}.csv")
+
+        # collect result data
+        _, metric_value = next(iter(res_dict.items()))
+        num_vars = metric_value.shape[0]
+
+        if num_vars == 1:
+            assert args["model_name"] == "mpnn"
+            result_data = {}
+            result_data["Field"] = f"{args['flow_name']}_{args['dataset']['case_name']}_x{args['model']['var_id']}"
+            for metric_name, metric_value in res_dict.items():
+                result_data[metric_name] = metric_value.cpu().item()
+            append_results(result_data, result_path)
+
+        else:
+            result_data_list = []
+            for var_id in range(num_vars):
+                result_data = {}
+                result_data["Field"] = f"{args['flow_name']}_{args['dataset']['case_name']}_x{var_id}"
+                for metric_name, metric_value in res_dict.items():
+                    result_data[metric_name] = metric_value[var_id].cpu().item()
+                result_data_list.append(result_data)
+            append_results(result_data_list, result_path)
 
 
 if __name__ == "__main__":
@@ -147,6 +178,8 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, help="Checkpoint path to test.")
     parser.add_argument("--test_type", type=str, default="accumulate", help="Checkpoint path to test.")
     parser.add_argument("--denormalize", action="store_true", help="Compute metrics using denormalized output.")
+    parser.add_argument("--save_result", action="store_true", help="Save results if set.")
+    parser.add_argument("--result_root", type=str, default="result", help="Root path to save results (default: 'result').")
     cmd_args = parser.parse_args() # can be accessed globally
 
     # read default args from config file
