@@ -9,7 +9,7 @@ from timeit import default_timer
 from tqdm import tqdm
 
 import metrics
-from utils import setup_seed, get_test_dataset, get_model, append_results
+from utils import setup_seed, get_test_dataset, get_model, get_model_name, append_results
 
 
 METRICS = ['MSE', 'RMSE', 'L2RE', 'MaxError', 'NMSE', 'MAE']
@@ -106,8 +106,22 @@ def test_loop(test_loader, model, args, metric_names=METRICS, test_type="accumul
 
 
 def main(args):
-    assert not args["if_training"]
     setup_seed(args["seed"])
+
+    # check mode
+    assert not args["if_training"]
+
+    # get default model path if it is not specified in config file or command line args
+    if args["model_path"] == "None":
+        model_name = get_model_name(args)
+        default_model_path = os.path.join(args["saved_dir"], 
+                                          args["flow_name"],
+                                          args["dataset"]["case_name"],
+                                          f"{model_name}-best.pt")
+        args["model_path"] = default_model_path
+
+    # check existence of model path
+    assert os.path.exists(args["model_path"]), f"No checkpoint found at {args['model_path']}."
 
     # get test data
     test_data = get_test_dataset(args)
