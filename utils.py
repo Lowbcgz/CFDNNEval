@@ -1,11 +1,17 @@
 import numpy as np
+import os
+import pandas as pd
 import torch
 import random
+from typing import Union
 
 from dataset import TubeDataset, NSCHDataset, PDEDarcyDataset, CavityDataset, TGVDataset, IRCylinderDataset, IRHillsDataset, HillsDataset, CylinderDataset
 from model import MPNN2D, MPNN3D, GNOT, MPNNIrregular
 
-def setup_seed(seed):
+
+def setup_seed(seed: int):
+    """Set up random seed.
+    """
     torch.manual_seed(seed)  # CPU
     torch.cuda.manual_seed_all(seed)  # GPU
     np.random.seed(seed)  # numpy
@@ -13,7 +19,9 @@ def setup_seed(seed):
     torch.backends.cudnn.deterministic = True  # cudnn
 
 
-def get_dataset(args):
+def get_dataset(args: dict):
+    """Get pytorch-style dataset according to args
+    """
     dataset_args = args["dataset"].copy()
     if args["flow_name"] == "tube":
         train_dataset = TubeDataset(filename="tube_train.hdf5", **dataset_args)
@@ -98,6 +106,8 @@ def get_dataset(args):
 
 
 def get_model(args):
+    """Get model according to args.
+    """
     model_args = args["model"].copy()
     if args["model_name"] == "mpnn":
         spatial_dim = model_args.pop("spatial_dim")
@@ -117,6 +127,8 @@ def get_model(args):
 
 
 def get_model_name(args):
+    """Get model name according to args.
+    """
     suffix = (f"_lr{args['optimizer']['lr']}" + 
               f"_bs{args['dataloader']['batch_size']}" + 
               f"_wd{args['optimizer']['weight_decay']}" +
@@ -139,6 +151,13 @@ def get_model_name(args):
     
 
 def get_min_max(dataloader):
+    """Calculate the minimum and maximum values for each channel in the dataset.
+    Args:
+        dataloader: Pytorch-style dataloader.
+    Returns:
+        channel_min: The minimum values for each channel.
+        channel_max: The maximum values for each channel.
+    """
     for i, batch in enumerate(dataloader):
         x = batch[0] # inputs [bs, h, w, c] or [bs, nx, c]
         c = x.shape[-1]
@@ -154,6 +173,8 @@ def get_min_max(dataloader):
 
 
 def get_test_dataset(args):
+    """Get pytorch-style test dataset according to args.
+    """
     # get dataset arguments
     dataset_args = args["dataset"].copy()
     if "multi_step_size" in dataset_args and dataset_args["multi_step_size"] > 1:
@@ -188,3 +209,66 @@ def get_test_dataset(args):
     else:
         raise NotImplementedError
     return test_dataset
+
+
+def load_results(path: str) -> list:
+    """Load results from specified path.
+    Args:
+        path (str): The csv file path to save the results.
+    Returns:
+        df (dict): The result data.
+    """
+    if os.path.exists(path):
+        try:
+            df = pd.read_csv(path)
+            return df.to_dict(orient='records')
+        except Exception as e:
+            print(f"Error loading data from {path}: {e}")
+            return []
+    else:
+        print(f"File {path} does not exist. Return empty list.")
+        return []
+
+
+def write_results(data: list, path: str):
+    """Write results to specified path.
+    Args:
+        data (dict): Result data.
+        path (str): The csv file path to save the results.
+    """
+    root_path = os.path.dirname(path)
+    if not os.path.exists(root_path):
+        os.makedirs(root_path)
+    try:
+        df = pd.DataFrame(data)
+        df.to_csv(path, index=False)
+        print(f"Successfully saved data to {path}.")
+    except Exception as e:
+        print(f"Error saving data to {path}: {e}")
+
+
+def append_results(data: Union[dict, list], path: str):
+    """Append results to specified path.
+    Args:
+        data (dict): Result data.
+        path (str): The csv file path to save the results.
+    """
+    result_data = load_results(path)
+    field2idx = {res["Field"]:idx for idx, res in enumerate(result_data)}
+
+    # update result If it exists
+    if isinstance(data, dict):
+        if data["Field"] in field2idx:
+            print(f"Test results for {data['Field']} exist, update it with the new results.")
+            result_data[field2idx[data["Field"]]] = data
+        else:
+            result_data.append(data)
+    else:
+        for res in data:
+            if res["Field"] in field2idx:
+                print(f"Test results for {res['Field']} exist, update it with the new results.")
+                result_data[field2idx[res["Field"]]] = res
+            else:
+                result_data.append(res)
+
+    write_results(result_data, path)
