@@ -237,6 +237,8 @@ def write_results(data: list, path: str):
         path (str): The csv file path to save the results.
     """
     root_path = os.path.dirname(path)
+    data = sorted(data, key=lambda res: res["Field"])
+    
     if not os.path.exists(root_path):
         os.makedirs(root_path)
     try:
