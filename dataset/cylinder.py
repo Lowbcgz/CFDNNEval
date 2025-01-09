@@ -7,12 +7,12 @@ from torch.utils.data import Dataset
 class CylinderDataset(Dataset):
     def __init__(self,
                  filename,
-                 saved_folder='../data/',
+                 saved_folder,
                  case_name = 'rBC_rRE',
                  reduced_resolution = 1,
                  reduced_batch = 1,
                  data_delta_time = 0.1,
-                 delta_time: float = 0.1,   
+                 delta_time = 0.1,   
                  num_samples_max = -1,
                  stable_state_diff = 0.0001,
                  norm_props = True,
@@ -20,25 +20,27 @@ class CylinderDataset(Dataset):
                  reshape_parameters = True,
                  multi_step_size = 1,
                  ):
-        
-        '''
+        """
         Args:
-            filename(str): the file name of dataset, such as "tube_dev.hdf5"
-            saved_folder(str) : The path to the folder where the dataset is stored , "/home/data2/cfdbench_hdf5/tube/"
-            case_name(str): Decide what type of dataset to use, for instance, "bc", "geo", "bc_geo" ...
-            reduced_resolution(int): reduced spatial resolution, default:1
-            reduced_batch(int): reduced batch, default:1 
-            delta_time(float): Determine the spacing of each frame, default:0.1
-            stable_state_diff(float): If the interval between two frames is less than this value, the following data is not taken, default:0.001
-            norm_props(bool): if True, normalize the viscosity and density, default:True
-            norm_bc(bool): if True, normalize the parameter of bc, default:True
-            reshape_parameters(bool): if True, reshape the parameters, (cases, p) -> (cases, x, y, p)
-            multi_step_size(int): Use the current frame to infer multi_step_size frames
+            filename (str): The file name of dataset file.
+            saved_folder (str) : The path to the folder where the dataset is stored.
+            case_name (str): Decide what type of dataset to use, such as "rBC", "rRE", "rBC_rRE", default: "rBC_rRE".
+            reduced_resolution (int): Downsampling rate of spatial resolution, default: 1.
+            reduced_batch (int): Downsampling rate of batch, default: 1.
+            data_delta_time (float): The time between two consecutive frames in the data, default: 0.1.
+            delta_time (float): Determine the spacing of each frame, default: 0.1.
+            stable_state_diff (float): If the interval of some physical quantity between two frames is less than this value, the following frames is not taken, default: 0.0001.
+            norm_props (bool): Normalize the physical properties if set True, default: True.
+            norm_bc (bool): Normalize the parameter of bc if set True, default: True.
+            reshape_parameters (bool): Reshape the parameters from (cases, p) to (cases, x, y, p) if set True, default: True.
+            multi_step_size(int): The number of time steps of label, default: 1.
+        
         Returns:
             input, label, mask, case_params, self.grid, case_id
+
         shape:
             (x, y, c), (x, y, c), (x, y, 1), (x, y, p), (x, y, 2), (1)
-        '''
+        """
         # The difference between input and output in number of frames.
         self.time_step_size = int(delta_time / data_delta_time)
         self.case_name = case_name
@@ -188,16 +190,14 @@ class CylinderDataset(Dataset):
         # print(self.inputs.shape, self.labels.shape, self.case_ids.shape, self.masks.shape, self.case_params.shape)
 
     def normalize_physics_props(self, case_params):
-        """
-        Normalize the physics properties in-place.
+        """Normalize the physics properties in-place.
         """
         case_params["RE"] = (
             case_params["RE"] - 8892.857   
         ) / 20801.535
 
     def normalize_bc(self, case_params):
-        """
-        Normalize the boundary conditions in-place.
+        """Normalize the boundary conditions in-place.
         """
         case_params['vel_top'] = (case_params['vel_top'] - 18.366547) / 16.31889
     
@@ -217,12 +217,12 @@ class CylinderDataset(Dataset):
 class IRCylinderDataset(Dataset):
     def __init__(self,
                  filename,
-                 saved_folder='../data/',
+                 saved_folder,
                  case_name = 'irBC_irRE',
                  reduced_resolution = 1,
                  reduced_batch = 1,
                  data_delta_time = 0.1,
-                 delta_time: float = 0.1,   
+                 delta_time = 0.1,
                  num_samples_max = -1,
                  stable_state_diff = 0.0001,
                  norm_props = True,
@@ -231,24 +231,27 @@ class IRCylinderDataset(Dataset):
                  multi_step_size = 1,
                  ):
         
-        '''
+        """
         Args:
-            filename(str): the file name of dataset, such as "tube_dev.hdf5"
-            saved_folder(str) : The path to the folder where the dataset is stored , "/home/data2/cfdbench_hdf5/tube/"
-            case_name(str): Decide what type of dataset to use, for instance, "bc", "geo", "bc_geo" ...
-            reduced_resolution(int): reduced spatial resolution, default:1
-            reduced_batch(int): reduced batch, default:1 
-            delta_time(float): Determine the spacing of each frame, default:0.1
-            stable_state_diff(float): If the interval between two frames is less than this value, the following data is not taken, default:0.001
-            norm_props(bool): if True, normalize the viscosity and density, default:True
-            norm_bc(bool): if True, normalize the parameter of bc, default:True
-            reshape_parameters(bool): if True, reshape the parameters, (cases, p) -> (cases, x, y, p)
-            multi_step_size(int): Use the current frame to infer multi_step_size frames
+            filename (str): The file name of dataset file.
+            saved_folder (str) : The path to the folder where the dataset is stored.
+            case_name (str): Decide what type of dataset to use, such as "irBC", "irRE", "irBC_irRE", default: "irBC_irRE".
+            reduced_resolution (int): Downsampling rate of spatial resolution, default: 1.
+            reduced_batch (int): Downsampling rate of batch, default: 1.
+            data_delta_time (float): The time between two consecutive frames in the data, default: 0.1.
+            delta_time (float): Determine the spacing of each frame, default: 0.1.
+            stable_state_diff (float): If the interval of some physical quantity between two frames is less than this value, the following frames is not taken, default: 0.0001.
+            norm_props (bool): Normalize the physical properties if set True, default: True.
+            norm_bc(bool): Normalize the parameter of bc if set True, default: True.
+            reshape_parameters (bool): Reshape the parameters from (cases, p) to (cases, x, y, p) if set True, default: True.
+            multi_step_size(int): The number of time steps of label, default: 1.
+
         Returns:
             input, label, mask, case_params, self.grid, case_id
+            
         shape:
             (nx, c), (nx, c), (nx, 1), (nx, p), (nx, 2), (1)
-        '''
+        """
         # The difference between input and output in number of frames.
         self.time_step_size = int(delta_time / data_delta_time)
         self.case_name = case_name
@@ -396,16 +399,14 @@ class IRCylinderDataset(Dataset):
         # print(self.inputs.shape, self.labels.shape, self.case_ids.shape, self.masks.shape, self.case_params.shape)
 
     def normalize_physics_props(self, case_params):
-        """
-        Normalize the physics properties in-place.
+        """Normalize the physics properties in-place.
         """
         case_params["RE"] = (
             case_params["RE"] - 8892.857   
         ) / 20801.535
 
     def normalize_bc(self, case_params):
-        """
-        Normalize the boundary conditions in-place.
+        """Normalize the boundary conditions in-place.
         """
         case_params['vel_top'] = (case_params['vel_top'] - 18.366547) / 16.31889
     

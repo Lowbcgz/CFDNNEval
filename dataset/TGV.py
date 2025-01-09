@@ -7,16 +7,34 @@ import numpy as np
 class TGVDataset(Dataset):
     def __init__(self,
                  filename,
-                 saved_folder='../data/',
-                 case_name = 'all',
+                 saved_folder,
+                 case_name = 'Re_ReD',
                  reduced_resolution = 1,
                  reduced_batch = 1,
                  num_samples_max = -1,
                  norm_props = True,
                  stable_state_diff = 0.0001,
-                 reshape_parameters= True,
-                 multi_step_size=1,
+                 reshape_parameters = True,
+                 multi_step_size = 1,
                  ):
+        """
+        Args:
+            filename (str): The file name of dataset file.
+            saved_folder (str) : The path to the folder where the dataset is stored.
+            case_name (str): Decide what type of dataset to use, such as "Re", "ReD", "Re_ReD", default: "all".
+            reduced_resolution (int): Downsampling rate of spatial resolution, default: 1.
+            reduced_batch (int): Downsampling rate of batch, default: 1.
+            stable_state_diff (float): If the interval of some physical quantity between two frames is less than this value, the following frames is not taken, default: 0.0001.
+            norm_props (bool): Normalize the physical properties if set True, default: True.
+            reshape_parameters (bool): Reshape the parameters from (cases, p) to (cases, x, y, p) if set True, default: True.
+            multi_step_size (int): The number of time steps of label, default: 1.
+
+        Returns:
+            input, label, mask, case_params, grid, case_id
+
+        shape:
+            (x, y, c), (x, y, c), (x, y, 1), (x, y, p), (x, y, 2), (1)
+        """
         self.multi_step_size = multi_step_size
         self.case_name = case_name
         self.inputs = []
@@ -28,10 +46,8 @@ class TGVDataset(Dataset):
 
         uvp_list=[]
         re_list=[]
-        V0_list=[]
         edge_list=[]
         nu_list=[]
-        rho_list=[]
         root_path = os.path.join(saved_folder, filename)
         with h5py.File(root_path, 'r') as f:
             # collect data
@@ -125,8 +141,7 @@ class TGVDataset(Dataset):
         
 
     def normalize_physics_props(self, physic_prop):
-        """
-        Normalize the physics properties in-place.
+        """Normalize the physics properties in-place.
         """
         physic_prop = physic_prop/np.array([1000.0,15.707,1.0])  #re,edge,nu
         

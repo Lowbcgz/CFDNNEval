@@ -10,31 +10,37 @@ class NSCHDataset(Dataset):
                  saved_folder,
                  case_name = 'ca_eps_ibc_mob_phi_re',
                  reduced_resolution = 1,
-                 reduced_resolution_t = 1,
+                 data_delta_time = 0.1,
+                 delta_time = 0.1,
                  reduced_batch = 1,
                  stable_state_diff = 0.001,
                  norm_props = True,
                  reshape_parameters = True,
                  multi_step_size = 1,
                  ):
-        '''
+        """
         Args:
             filename (str): The file name of dataset file.
             saved_folder (str) : The path to the folder where the dataset is stored.
-            case_name (str): Decide what type of dataset to use, for instance, "ca", "eps", ...
-            reduced_resolution (int): Downsampling rate of spatial resolution, default: 1
-            reduced_resolution_t (int): Downsampling rate of temporal resolution, default: 1
-            reduced_batch (int): reduced batch, default: 1
-            stable_state_diff (float): If the interval of some physical quantity between two frames is less than this value, the following frames is not taken, default: 0.001
-            norm_props (bool): Normalize the physical properties if set True, default: True
-            reshape_parameters (bool): Reshape the parameters from (cases, p) to (cases, x, y, p) if set True, default: True
+            case_name (str): Decide what type of dataset to use, such as "ca", "eps", ..., default: "ca_eps_ibc_mob_phi_re".
+            reduced_resolution (int): Downsampling rate of spatial resolution, default: 1.
+            data_delta_time (float): The time between two consecutive frames in the data, default: 0.1.
+            delta_time(float): Determine the spacing of each frame, default: 0.1.
+            reduced_batch (int): Downsampling rate of batch, default: 1.
+            stable_state_diff (float): If the interval of some physical quantity between two frames is less than this value, the following frames is not taken, default: 0.001.
+            norm_props (bool): Normalize the physical properties if set True, default: True.
+            reshape_parameters (bool): Reshape the parameters from (cases, p) to (cases, x, y, p) if set True, default: True.
+            multi_step_size (int): The number of time steps of label, default: 1.
+        
         Returns:
             input, label, mask, case_params, grid, case_id
+        
         shape:
             (x, y, c), (x, y, c), (x, y, 1), (x, y, p), (x, y, 2), (1)
-        '''
-        self.multi_step_size = multi_step_size
+        """
+        self.time_step_size = int(delta_time / data_delta_time)
         self.case_name = case_name
+        self.multi_step_size = multi_step_size
         
         # dataset outputs
         self.inputs = []
@@ -78,7 +84,7 @@ class NSCHDataset(Dataset):
         for fuvp in fuvp_list:
             # print(fuvp.shape) # (B, T, Nx*Ny, 6)  6:(x, y, phi, u, v, pressure)
             fuvp= fuvp.reshape(fuvp.shape[0], fuvp.shape[1], 66, 66, 6)
-            fuv = fuvp[:, ::reduced_resolution_t, ::reduced_resolution, ::reduced_resolution, :5] # (B, T, Nx, Ny, 5)
+            fuv = fuvp[:, ::self.time_step_size, ::reduced_resolution, ::reduced_resolution, :5] # (B, T, Nx, Ny, 5)
             
             # get grid
             if self.grid is None:

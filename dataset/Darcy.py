@@ -2,7 +2,6 @@ import os
 import h5py
 import numpy as np
 import torch
-import random
 from torch.utils.data import Dataset
 
 class PDEDarcyDataset(Dataset):
@@ -10,23 +9,24 @@ class PDEDarcyDataset(Dataset):
     beta = 1. # fix
 
     def __init__(self, 
-                 filename="darcy.hdf5",
-                 saved_folder="/data1/FluidData/darcy",
+                 filename,
+                 saved_folder,
                  reduced_resolution = 1,
                  reduced_batch = 1,
-                 split="train",
-                 reshape_parameters=True,
+                 split = "train",
+                 reshape_parameters = True,
                  ):
         """Dataset for Darcy flow in PDEBench.
         Args:
-            filename (str): The file name of dataset, default: "2D_DarcyFlow_beta1.0_Train.hdf5".
+            filename (str): The file name of dataset file.
             saved_folder (str) : The path to the folder where the dataset is stored such as "/data1/FluidData/darcy".
             reduced_resolution (int): reduced spatial resolution, default: 1.
             reduced_batch (int): reduced batch, default: 1.
-            split (str): dataset split which can be train, val or test, default: train.
+            split (str): Dataset split which can be train, val or test, default: train.
 
         Returns:
             inputs, label, mask, case_params, self.grid, case_id
+            
         shape:
             (x, y, c), (x, y, c), (x, y, 1), (x, y, 1), (x, y, 2), (1)
         """
