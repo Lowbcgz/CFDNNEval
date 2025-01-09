@@ -7,26 +7,27 @@ from torch.utils.data import Dataset
 class NSCHDataset(Dataset):
     def __init__(self,
                  filename,
-                 saved_folder='../data/',
+                 saved_folder,
                  case_name = 'ca_eps_ibc_mob_phi_re',
                  reduced_resolution = 1,
+                 reduced_resolution_t = 1,
                  reduced_batch = 1,
                  stable_state_diff = 0.001,
                  norm_props = True,
                  reshape_parameters = True,
                  multi_step_size = 1,
                  ):
-        
         '''
         Args:
-            filename (str): the file name of dataset, such as "tube_dev.hdf5"
-            saved_folder (str) : The path to the folder where the dataset is stored , "/home/data2/cfdbench_hdf5/tube/"
-            case_name (str): Decide what type of dataset to use, for instance, "bc", "geo", "bc_geo" ...
-            reduced_resolution (int): reduced spatial resolution, default:1
-            reduced_batch (int): reduced batch, default:1 
-            stable_state_diff (float): If the interval between two frames is less than this value, the following data is not taken, default:0.001
-            norm_props (bool): if True, normalize the viscosity and density, default:True
-            reshape_parameters (bool): if True, reshape the parameters, (cases, p) -> (cases, x, y, p)
+            filename (str): The file name of dataset file.
+            saved_folder (str) : The path to the folder where the dataset is stored.
+            case_name (str): Decide what type of dataset to use, for instance, "ca", "eps", ...
+            reduced_resolution (int): Downsampling rate of spatial resolution, default: 1
+            reduced_resolution_t (int): Downsampling rate of temporal resolution, default: 1
+            reduced_batch (int): reduced batch, default: 1
+            stable_state_diff (float): If the interval of some physical quantity between two frames is less than this value, the following frames is not taken, default: 0.001
+            norm_props (bool): Normalize the physical properties if set True, default: True
+            reshape_parameters (bool): Reshape the parameters from (cases, p) to (cases, x, y, p) if set True, default: True
         Returns:
             input, label, mask, case_params, grid, case_id
         shape:
@@ -77,7 +78,7 @@ class NSCHDataset(Dataset):
         for fuvp in fuvp_list:
             # print(fuvp.shape) # (B, T, Nx*Ny, 6)  6:(x, y, phi, u, v, pressure)
             fuvp= fuvp.reshape(fuvp.shape[0], fuvp.shape[1], 66, 66, 6)
-            fuv = fuvp[:, :, ::reduced_resolution, ::reduced_resolution, :5] # (B, T, Nx, Ny, 5)
+            fuv = fuvp[:, ::reduced_resolution_t, ::reduced_resolution, ::reduced_resolution, :5] # (B, T, Nx, Ny, 5)
             
             # get grid
             if self.grid is None:
@@ -94,8 +95,8 @@ class NSCHDataset(Dataset):
                         # print(f"Invalid frame {t} in case {id_count}")
                         break
                     # filter out converged frames
-                    inp_magn = np.sqrt(np.sum(inputs[t, :, :, 2:] ** 2, axis=-1))
-                    out_magn = np.sqrt(np.sum(outputs[t, :, :, 2:] ** 2, axis=-1))
+                    inp_magn = np.sqrt(np.sum(inputs[t, :, :, 2:3] ** 2, axis=-1))
+                    out_magn = np.sqrt(np.sum(outputs[t, :, :, 2:3] ** 2, axis=-1))
                     diff = np.abs(inp_magn - out_magn).mean()
                     if diff < stable_state_diff:
                         # print(f"Converged at {t} in case {id_count}")
@@ -107,6 +108,7 @@ class NSCHDataset(Dataset):
                         self.case_ids.append(id_count)
                 
                 id_count += 1
+
         #################################################
                         
         # Total frames := The sum of the number of frames for each case
@@ -123,9 +125,7 @@ class NSCHDataset(Dataset):
             # reshape the parameters
             self.physic_prop = torch.from_numpy(physic_prop).float() # (Total cases, 4)
             cases, p = self.physic_prop.shape
-            
-            self.physic_prop = self.physic_prop.reshape(cases, 1, 1, p)
-            self.physic_prop = self.physic_prop.repeat(1, x, y, 1) # (cases, x, y, 4)
+            self.physic_prop = self.physic_prop.reshape(cases, 1, 1, p).repeat(1, x, y, 1) # (cases, x, y, 4)
         else:
             self.physic_prop = torch.from_numpy(physic_prop).float() # (Total cases, 4)
         
@@ -135,8 +135,10 @@ class NSCHDataset(Dataset):
         """
         physic_prop = physic_prop / np.array([100.0, 100.0, 1.0, 0.1])  # cas, res, mobs, eps
 
+
     def __len__(self):
         return len(self.inputs)
+
 
     def __getitem__(self, idx):
         input = self.inputs[idx]  # (x, y, 2)
