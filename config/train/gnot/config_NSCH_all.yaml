@@ -12,10 +12,11 @@ seed: 0
 training_type: "autoregressive" # "single_step"
 epochs: 25
 dataset:
-  saved_folder: "/data1/FluidData/two_phase_flow"
-  case_name: "ibc_phi_ca_mob_re_eps"
+  saved_folder: "/data1/FluidData/two_phase_flow_new"
+  case_name: "ca_eps_ibc_mob_phi_re"
   reduced_resolution: 1
   reduced_batch: 1
+  delta_time: 0.5
   stable_state_diff: 0.001
   norm_props: True
   reshape_parameters: True
