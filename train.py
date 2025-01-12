@@ -162,7 +162,7 @@ def val_loop(val_loader, model, loss_fn, device, output_dir, epoch, args, metric
                     # Autoregressive loop
                     preds=[]
                     for i in range(val_loader.dataset.multi_step_size):
-                        if args["model_name"] in ["NUFNO"]:
+                        if args["model_name"] in ["NUFNO", "NUUNet"]:
                             pred, aux_out = model(x, case_params, mask[:,i], grid)
                             x = aux_out
                         else:
