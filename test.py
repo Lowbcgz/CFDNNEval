@@ -162,8 +162,7 @@ def main(args):
         _, metric_value = next(iter(res_dict.items()))
         num_vars = metric_value.shape[0]
 
-        if num_vars == 1:
-            assert args["model_name"] == "mpnn"
+        if args["model_name"] == "mpnn" or args["model_name"] == "mpnn_irregular":
             result_data = {}
             result_data["Field"] = f"{args['flow_name']}_{args['dataset']['case_name']}_x{args['model']['var_id']}"
             for metric_name, metric_value in res_dict.items():
