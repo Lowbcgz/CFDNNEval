@@ -12,7 +12,7 @@ seed: 0
 training_type: "autoregressive" # "single_step"
 epochs: 25
 dataset:
-  saved_folder: "/data1/FluidData/taylor_green"
+  saved_folder: "/data1/FluidData/taylor_green_new"
   case_name: "Re_ReD"
   reduced_resolution: 1
   reduced_batch: 1
@@ -26,7 +26,7 @@ dataloader:
   pin_memory: False
 model:
   neighbors: 1
-  delta_t: 0.045
+  delta_t: 0.1
   hidden_features: 128
   hidden_layers: 6
   n_params: 3

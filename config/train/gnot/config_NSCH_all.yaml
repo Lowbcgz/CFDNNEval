@@ -16,7 +16,8 @@ dataset:
   case_name: "ca_eps_ibc_mob_phi_re"
   reduced_resolution: 1
   reduced_batch: 1
-  delta_time: 0.5
+  data_delta_time: 0.01
+  delta_time: 0.05
   stable_state_diff: 0.001
   norm_props: True
   reshape_parameters: True
