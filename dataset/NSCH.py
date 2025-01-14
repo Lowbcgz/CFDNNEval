@@ -10,8 +10,8 @@ class NSCHDataset(Dataset):
                  saved_folder,
                  case_name = 'ca_eps_ibc_mob_phi_re',
                  reduced_resolution = 1,
-                 data_delta_time = 0.1,
-                 delta_time = 0.1,
+                 data_delta_time = 0.01,
+                 delta_time = 0.01,
                  reduced_batch = 1,
                  stable_state_diff = 0.001,
                  norm_props = True,
@@ -24,8 +24,8 @@ class NSCHDataset(Dataset):
             saved_folder (str) : The path to the folder where the dataset is stored.
             case_name (str): Decide what type of dataset to use, such as "ca", "eps", ..., default: "ca_eps_ibc_mob_phi_re".
             reduced_resolution (int): Downsampling rate of spatial resolution, default: 1.
-            data_delta_time (float): The time between two consecutive frames in the data, default: 0.1.
-            delta_time(float): Determine the spacing of each frame, default: 0.1.
+            data_delta_time (float): The time between two consecutive frames in the data, default: 0.01.
+            delta_time(float): Determine the spacing of each frame, default: 0.01.
             reduced_batch (int): Downsampling rate of batch, default: 1.
             stable_state_diff (float): If the interval of some physical quantity between two frames is less than this value, the following frames is not taken, default: 0.001.
             norm_props (bool): Normalize the physical properties if set True, default: True.
