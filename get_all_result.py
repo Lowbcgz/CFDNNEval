@@ -53,9 +53,9 @@ def main(args):
     model.eval()
     prev_case_id = -1
     preds = torch.Tensor().to(device)
-    targets = torch.Tensor().to(device)
-    all_pred_list = []
-    all_target_list = []
+    gt = torch.Tensor().to(device)
+    pred_list = []
+    gt_list = []
 
     if args["channel_min_max"] is not None:
         channel_min, channel_max = args["channel_min_max"]
@@ -68,10 +68,10 @@ def main(args):
                     preds = preds * (channel_max[args["model"]["var_id"]] - channel_min[args["model"]["var_id"]]) + channel_min[args["model"]["var_id"]]
                 else:
                     preds = preds * (channel_max - channel_min) + channel_min
-            all_pred_list.append(preds.squeeze(0).cpu())
-            all_target_list.append(targets.squeeze(0).cpu())
+            pred_list.append(preds.squeeze(0).cpu())
+            gt_list.append(gt.squeeze(0).cpu())
             preds = torch.Tensor().to(device)
-            targets = torch.Tensor().to(device)
+            gt = torch.Tensor().to(device)
 
         if prev_case_id != case_id:
             x = x.to(device)
@@ -97,11 +97,19 @@ def main(args):
         preds = torch.cat([preds, pred.unsqueeze(1)], dim=1) # [bs, t, h, w, c] (mpnn: [bs, t, h, w, 1])
         if args["model_name"] == "mpnn" or args["model_name"] == "mpnn_irregular":
             y = y[..., args["model"]["var_id"]].unsqueeze(-1) # [bs, t, h, w, 1]
-        targets = torch.cat([targets, y.unsqueeze(1)], dim=1) # [bs, t, h, w, c] (mpnn: [bs, t, h, w, 1])
+        gt = torch.cat([gt, y.unsqueeze(1)], dim=1) # [bs, t, h, w, c] (mpnn: [bs, t, h, w, 1])
 
         prev_case_id = case_id.item()
 
-    assert len(all_pred_list) == len(all_target_list)
+    if cmd_args.denormalize:
+        if args["model_name"] == "mpnn" or args["model_name"] == "mpnn_irregular":
+            preds = preds * (channel_max[args["model"]["var_id"]] - channel_min[args["model"]["var_id"]]) + channel_min[args["model"]["var_id"]]
+        else:
+            preds = preds * (channel_max - channel_min) + channel_min
+    pred_list.append(preds.squeeze(0).cpu())
+    gt_list.append(gt.squeeze(0).cpu())
+
+    assert len(pred_list) == len(gt_list)
     
     # save inference result
     output_dir = os.path.join(cmd_args.result_dir, 
@@ -112,11 +120,11 @@ def main(args):
         os.makedirs(output_dir)
 
     if args["model_name"] == "mpnn" or args["model_name"] == "mpnn_irregular":
-        torch.save(all_pred_list, os.path.join(output_dir, f"pred_x{args['model']['var_id']}_list.pt"))
-        torch.save(all_target_list, os.path.join(output_dir, f"gt_x{args['model']['var_id']}_list.pt"))
+        torch.save(pred_list, os.path.join(output_dir, f"pred_x{args['model']['var_id']}_list.pt"))
+        torch.save(gt_list, os.path.join(output_dir, f"gt_x{args['model']['var_id']}_list.pt"))
     else:
-        torch.save(all_pred_list, os.path.join(output_dir, "pred_list.pt"))
-        torch.save(all_target_list, os.path.join(output_dir, "gt_list.pt"))
+        torch.save(pred_list, os.path.join(output_dir, "pred_list.pt"))
+        torch.save(gt_list, os.path.join(output_dir, "gt_list.pt"))
         
 
 if __name__ == "__main__":
