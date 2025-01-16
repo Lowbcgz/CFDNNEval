@@ -60,6 +60,11 @@ def main(args):
 
     for x, y, mask, case_params, grid, case_id in test_loader:
         if prev_case_id != case_id and prev_case_id != -1:
+            if cmd_args.denormalize:
+                if args["model_name"] == "mpnn" or args["model_name"] == "mpnn_irregular":
+                    pred_list = [(pred * (channel_max[args["model"]["var_id"]] - channel_min[args["model"]["var_id"]]) + channel_min[args["model"]["var_id"]]).cpu() for pred in pred_list]
+                else:
+                    pred_list = [ (pred * (channel_max - channel_min) + channel_min).cpu() for pred in pred_list]
             break
 
         # prepare model input
@@ -68,7 +73,7 @@ def main(args):
             if args["channel_min_max"]:
                 x = (x - channel_min) / (channel_max - channel_min)
         else:
-            x = pred_list[-1].to(device)
+            x = pred_list[-1]
         
         y = y.to(device)
 
