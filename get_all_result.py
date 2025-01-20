@@ -120,11 +120,18 @@ def main(args):
         os.makedirs(output_dir)
 
     if args["model_name"] == "mpnn" or args["model_name"] == "mpnn_irregular":
-        torch.save(pred_list, os.path.join(output_dir, f"pred_x{args['model']['var_id']}_list.pt"))
-        torch.save(gt_list, os.path.join(output_dir, f"gt_x{args['model']['var_id']}_list.pt"))
+        pred_file_name = f"pred_x{args['model']['var_id']}_list"
+        gt_file_name = f"gt_x{args['model']['var_id']}_list"
     else:
-        torch.save(pred_list, os.path.join(output_dir, "pred_list.pt"))
-        torch.save(gt_list, os.path.join(output_dir, "gt_list.pt"))
+        pred_file_name = "pred_list"
+        gt_file_name = "gt_list"
+
+    if cmd_args.no_filter:
+        pred_file_name += "_no-filter"
+        gt_file_name += "_no-filter"
+
+    torch.save(pred_list, os.path.join(output_dir, f"{pred_file_name}.pt"))
+    torch.save(gt_list, os.path.join(output_dir, f"{gt_file_name}.pt"))
         
 
 if __name__ == "__main__":
@@ -138,6 +145,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, help="Checkpoint path to test.")
     parser.add_argument("--denormalize", action="store_true", help="Compute metrics using denormalized output.")
     parser.add_argument("--result_dir", type=str, default="result/all")
+    parser.add_argument("--no_filter", action="store_true", help="Do not filter frames if set.")
     cmd_args = parser.parse_args()
 
     # read default args from config file
@@ -149,6 +157,8 @@ if __name__ == "__main__":
         args["model_path"] = cmd_args.model_path
     if cmd_args.case_name:
         args["dataset"]["case_name"] = cmd_args.case_name
+    if cmd_args.no_filter:
+        args["dataset"]["stable_state_diff"] = 0.
     print(args)
 
     main(args)
