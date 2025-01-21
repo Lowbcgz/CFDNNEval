@@ -8,7 +8,7 @@ from .unet import *
 from .auto_deeponet import AutoDeepONet,AutoDeepONet_3d
 from .NUNO.nufno2d import NUFNO2d
 from .NUNO.nufno3d import NUFNO3d
-from .NUNO.nu-unet import NUUNet2d, NUUNet3d
+from .NUNO.nuunet import NUUNet2d, NUUNet3d
 from .geofno import geoFNO2d
 from .oformer.oformer import Oformer
 from .GFormer.libs.ns_lite import FourierTransformer2DLite, My_FourierTransformer2D, My_FourierTransformer3D, Darcy_FourierTransformer2D

@@ -9,6 +9,7 @@ import torch.nn as nn
 import numpy as np
 import torch
 import torch.nn.functional as F
+from collections import OrderedDict
 
 
 
@@ -212,33 +213,40 @@ class SpectralConv2d(nn.Module):
 class NUUNet2d(nn.Module):
 
     def __init__(self, in_channels=2, out_channels=2, init_features=12, n_case_params = 5, n_subdomains = 6):
-        super(UNet2d, self).__init__()
+        super(NUUNet2d, self).__init__()
+
+        self.n_subdomains = n_subdomains
+        self.in_channels = in_channels
         self.out_channels = out_channels
+        self.n_case_params = n_case_params
         features = init_features
-        self.encoder1 = UNet2d._block(in_channels*n_subdomains + 1 + n_case_params, features, name="enc1") # +1 for mask
+        self.encoder1 = NUUNet2d._block(in_channels*n_subdomains + 2 + n_case_params, features, name="enc1") # +1 for mask
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.encoder2 = UNet2d._block(features, features * 2, name="enc2")
+        self.encoder2 = NUUNet2d._block(features, features * 2, name="enc2")
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.encoder3 = UNet2d._block(features * 2, features * 4, name="enc3")
+        self.encoder3 = NUUNet2d._block(features * 2, features * 4, name="enc3")
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.encoder4 = UNet2d._block(features * 4, features * 8, name="enc4")
+        self.encoder4 = NUUNet2d._block(features * 4, features * 8, name="enc4")
         self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        self.bottleneck = UNet2d._block(features * 8, features * 16, name="bottleneck")
+        self.bottleneck = NUUNet2d._block(features * 8, features * 16, name="bottleneck")
 
         self.upconv4 = nn.ConvTranspose2d(features * 16, features * 8, kernel_size=2, stride=2)
-        self.decoder4 = UNet2d._block((features * 8) * 2, features * 8, name="dec4")
+        self.decoder4 = NUUNet2d._block((features * 8) * 2, features * 8, name="dec4")
         self.upconv3 = nn.ConvTranspose2d(features * 8, features * 4, kernel_size=2, stride=2)
-        self.decoder3 = UNet2d._block((features * 4) * 2, features * 4, name="dec3")
+        self.decoder3 = NUUNet2d._block((features * 4) * 2, features * 4, name="dec3")
         self.upconv2 = nn.ConvTranspose2d(features * 4, features * 2, kernel_size=2, stride=2)
-        self.decoder2 = UNet2d._block((features * 2) * 2, features * 2, name="dec2")
+        self.decoder2 = NUUNet2d._block((features * 2) * 2, features * 2, name="dec2")
         self.upconv1 = nn.ConvTranspose2d(features * 2, features, kernel_size=2, stride=2)
-        self.decoder1 = UNet2d._block(features * 2, features, name="dec1")
+        self.decoder1 = NUUNet2d._block(features * 2, features, name="dec1")
 
-        self.conv = nn.Conv2d(in_channels=features, out_channels=out_channels, kernel_size=1)
+        self.conv = nn.Conv2d(in_channels=features, out_channels=out_channels * n_subdomains, kernel_size=1)
 
     def forward(self, x, case_params, mask, grid):
-        x = torch.cat((x, mask, case_params), dim=-1)
+        x = x.reshape([-1] + list(x.shape[-4:-2])+[self.in_channels*self.n_subdomains])
+        batch_size, size_x, size_y = x.shape[0], x.shape[1], x.shape[2]
+        grid1 = self.get_grid(x.shape, x.device)
+        x = torch.cat((x, grid1, case_params), dim=-1)
         x = x.permute(0, 3, 1, 2)
         
         enc1 = self.encoder1(x)
@@ -264,7 +272,20 @@ class NUUNet2d(nn.Module):
         dec1 = self.pad(dec1, enc1)
         dec1 = torch.cat((dec1, enc1), dim=1)
         dec1 = self.decoder1(dec1)
-        return (self.conv(dec1)).permute(0, 2, 3, 1) * mask
+        x = self.conv(dec1)
+        input_xy_sd = grid.reshape(batch_size * self.n_subdomains, -1, 1, 2)  # (bs* n_subdomains, maxlen_sd, 1, dim), with (H, W)=(maxlen_sd, 1)
+        x = x.reshape(batch_size, size_x, size_y, self.n_subdomains, self.out_channels)
+        out = x.permute(0, 3, 1, 2, 4).reshape(-1, size_x, size_y, self.out_channels)  # (bs* n_subdomains, size_x, size_y, n_c ), with (H, W)=(size_x, size_y)
+
+        u = F.grid_sample(input=out.permute(0, 3, 1, 2), grid=input_xy_sd, 
+                    padding_mode='border', align_corners=False)  # (bs* n_subdomains, n_c, maxlen_sd, 1)
+
+        out = u.squeeze(-1).permute(0, 2, 1)\
+                    .reshape(batch_size, self.n_subdomains, -1,  self.out_channels)\
+                    .permute(0, 2, 1, 3)  # (bs, maxlen_sd, n_subdomains, n_c)
+        pred = out*mask
+        aux_out = x
+        return pred, aux_out 
     
     def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
         info = {}
@@ -277,6 +298,14 @@ class NUUNet2d(nn.Module):
         else:
             #TODO: default loss_fn
             pass
+
+    def get_grid(self, shape, device):
+        batchsize, size_x, size_y = shape[0], shape[1], shape[2]
+        gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
+        gridx = gridx.reshape(1, size_x, 1, 1).repeat([batchsize, 1, size_y, 1])
+        gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
+        gridy = gridy.reshape(1, 1, size_y, 1).repeat([batchsize, size_x, 1, 1])
+        return torch.cat((gridx, gridy), dim=-1).to(device)
         
     def pad(self, x1, x2): #pad x1, s.t. x1.shape = x2.shape
         diffY = x2.size()[2] - x1.size()[2]
@@ -326,47 +355,58 @@ class NUUNet2d(nn.Module):
 class NUUNet3d(nn.Module):
 
     def __init__(self, in_channels=3, out_channels=3, init_features=12, n_case_params = 5, n_subdomains = 6):
-        super(UNet3d, self).__init__()
-
+        super(NUUNet3d, self).__init__()
+        self.n_subdomains = n_subdomains
+        self.outputs_channel = out_channels
         features = init_features
-        self.encoder1 = UNet3d._block(in_channels*n_subdomains + 1 + n_case_params, features, name="enc1")
+        self.encoder1 = NUUNet3d._block(in_channels*n_subdomains + 3 + n_case_params, features, name="enc1")
         self.pool1 = nn.MaxPool3d(kernel_size=2, stride=2)
-        self.encoder2 = UNet3d._block(features, features * 2, name="enc2")
+        self.encoder2 = NUUNet3d._block(features, features * 2, name="enc2")
         self.pool2 = nn.MaxPool3d(kernel_size=2, stride=2)
-        self.encoder3 = UNet3d._block(features * 2, features * 4, name="enc3")
+        self.encoder3 = NUUNet3d._block(features * 2, features * 4, name="enc3")
         self.pool3 = nn.MaxPool3d(kernel_size=2, stride=2)
-        self.encoder4 = UNet3d._block(features * 4, features * 8, name="enc4")
-        self.pool4 = nn.MaxPool3d(kernel_size=2, stride=2)
+        # self.encoder4 = NUUNet3d._block(features * 4, features * 8, name="enc4")
+        # self.pool4 = nn.MaxPool3d(kernel_size=2, stride=2)
 
-        self.bottleneck = UNet3d._block(features * 8, features * 16, name="bottleneck")
+        # self.bottleneck = NUUNet3d._block(features * 8, features * 16, name="bottleneck")
+        self.bottleneck = NUUNet3d._block(features * 4, features * 8, name="bottleneck")
 
-        self.upconv4 = nn.ConvTranspose3d(features * 16, features * 8, kernel_size=2, stride=2)
-        self.decoder4 = UNet3d._block((features * 8) * 2, features * 8, name="dec4")
+        # self.upconv4 = nn.ConvTranspose3d(features * 16, features * 8, kernel_size=2, stride=2)
+        # self.decoder4 = NUUNet3d._block((features * 8) * 2, features * 8, name="dec4")
         self.upconv3 = nn.ConvTranspose3d(features * 8, features * 4, kernel_size=2, stride=2)
-        self.decoder3 = UNet3d._block((features * 4) * 2, features * 4, name="dec3")
+        self.decoder3 = NUUNet3d._block((features * 4) * 2, features * 4, name="dec3")
         self.upconv2 = nn.ConvTranspose3d(features * 4, features * 2, kernel_size=2, stride=2)
-        self.decoder2 = UNet3d._block((features * 2) * 2, features * 2, name="dec2")
+        self.decoder2 = NUUNet3d._block((features * 2) * 2, features * 2, name="dec2")
         self.upconv1 = nn.ConvTranspose3d(features * 2, features, kernel_size=2, stride=2)
-        self.decoder1 = UNet3d._block(features * 2, features, name="dec1")
+        self.decoder1 = NUUNet3d._block(features * 2, features, name="dec1")
 
-        self.conv = nn.Conv3d(in_channels=features, out_channels=out_channels, kernel_size=1)
+        self.conv = nn.Conv3d(in_channels=features, out_channels=out_channels * n_subdomains, kernel_size=1)
 
     def forward(self, x, case_params, mask, grid):
-        x = torch.cat((x, mask, case_params), dim=-1)
+        grid_samp = grid
+        batch_size = x.shape[0]
+        x = x.reshape(list(x.shape[:-2])+[-1])
+        grid_x = torch.zeros(list(x.shape[:-2])+[3]).to(x.device)
+        # x, case_params, bbox_sd, grid_shape, indices_sd, max_n_points_sd, order_sd, xyz, xyz_sd = self.data_interp(x, case_params, mask, grid)
+        grid_x = self.get_grid(x.shape, x.device)
+        s1, s2, s3 = grid_x.shape[1], grid_x.shape[2], grid_x.shape[3]
+        x = torch.cat((x, grid_x, case_params), dim=-1)
         x = x.permute(0, 4, 1, 2, 3)
 
         enc1 = self.encoder1(x)
         enc2 = self.encoder2(self.pool1(enc1))
         enc3 = self.encoder3(self.pool2(enc2))
-        enc4 = self.encoder4(self.pool3(enc3))
+        # enc4 = self.encoder4(self.pool3(enc3))
 
-        bottleneck = self.bottleneck(self.pool4(enc4))
+        # bottleneck = self.bottleneck(self.pool4(enc4))
+        bottleneck = self.bottleneck(self.pool3(enc3))
 
-        dec4 = self.upconv4(bottleneck)
-        dec4 = self.pad(dec4, enc4)
-        dec4 = torch.cat((dec4, enc4), dim=1)
-        dec4 = self.decoder4(dec4)
-        dec3 = self.upconv3(dec4)
+        # dec4 = self.upconv4(bottleneck)
+        # dec4 = self.pad(dec4, enc4)
+        # dec4 = torch.cat((dec4, enc4), dim=1)
+        # dec4 = self.decoder4(dec4)
+        # dec3 = self.upconv3(dec4)
+        dec3 = self.upconv3(bottleneck)
         dec3 = self.pad(dec3, enc3)
         dec3 = torch.cat((dec3, enc3), dim=1)
         dec3 = self.decoder3(dec3)
@@ -378,7 +418,53 @@ class NUUNet3d(nn.Module):
         dec1 = self.pad(dec1, enc1)
         dec1 = torch.cat((dec1, enc1), dim=1)
         dec1 = self.decoder1(dec1)
-        return (self.conv(dec1)).permute(0, 2, 3, 4, 1) * mask
+        x = (self.conv(dec1)).permute(0, 2, 3, 4, 1) 
+        # x = x.permute(0, 2, 3, 4, 1) # pad the domain if input is non-periodic
+
+        x = x.reshape(batch_size, 
+                s1, s2, s3, self.n_subdomains, self.outputs_channel)
+        # out = out.cpu().detach().numpy()
+
+        # norm
+        # x_max, _ = torch.max(x, dim = list(range(len(x.shape)-1)))
+        # x_min, _ = torch.min(x, dim = list(range(len(x.shape)-1)))
+        # x = (x - x_min)/(x_max-x_min)
+
+        # Interpolation (from grids to point cloud)
+        out = x.permute(0, 4, 5, 1, 2, 3)\
+            .reshape(-1, self.outputs_channel, 
+                s1, s2, s3)
+            # Output shape: (batch * n_subdomains, output_dim
+            #   s2, s1, s3)
+
+        
+        u = F.grid_sample(input=out, grid=grid_samp.reshape(batch_size*self.n_subdomains, -1, 1, 1, 3), 
+            padding_mode='border', align_corners=False)
+            # Output shape: (batch * n_subdomains, output_dim, 
+            #   n_points_sd_padded, 1, 1)
+        out = u.squeeze(-1).squeeze(-1).permute(0, 2, 1)\
+            .reshape(batch_size, self.n_subdomains, -1, self.outputs_channel)\
+            .permute(0, 2, 1, 3)
+        out = out*mask
+        del grid_x
+        # print(out.shape)
+            # Output shape: (batch_size, n_points_sd_padded, 
+            #    n_subdomains, output_dim)
+
+        # for i in range(self.n_subdomains):
+        #     for j in range(len(indices_sd[i])):
+        #         output[:, indices_sd[i][j], :] = out[:, j, :, i]
+        return out, x
+    
+    def get_grid(self, shape, device):
+        batchsize, size_x, size_y, size_z = shape[0], shape[1], shape[2], shape[3]
+        gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
+        gridx = gridx.reshape(1, size_x, 1, 1, 1).repeat([batchsize, 1, size_y, size_z, 1])
+        gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
+        gridy = gridy.reshape(1, 1, size_y, 1, 1).repeat([batchsize, size_x, 1, size_z, 1])
+        gridz = torch.tensor(np.linspace(0, 1, size_z), dtype=torch.float)
+        gridz = gridz.reshape(1, 1, 1, size_z, 1).repeat([batchsize, size_x, size_y, 1, 1])
+        return torch.cat((gridx, gridy, gridz), dim=-1).to(device)
 
     def one_forward_step(self, x, case_params, mask,  grid, y, loss_fn=None, args= None):
         info = {}

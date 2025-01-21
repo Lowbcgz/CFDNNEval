@@ -16,7 +16,7 @@ class NUNO_Data_utils_2d:
     def __init__(self) -> None:
         self.tree=None
 
-    def _data_preprocessing(self, x,  grid, n_subdomains=8):
+    def _data_preprocessing(self, x,  grid, n_subdomains=8, return_tree=False):
 
         """
         inputs:
@@ -158,7 +158,9 @@ class NUNO_Data_utils_2d:
             input_u_sd = input_u_sd.reshape(-1, T, n_c, n_subdomains).transpose((1, 0, 3, 2))  # (T, maxlen_sd, n_subdomains, n_c)
             input_u_sd_mask = torch.from_numpy(input_u_sd_mask.reshape(1,-1, 1, n_subdomains)).float()  #(maxlen_sd, 1, n_subdomains)
             input_u_sd_mask = input_u_sd_mask.repeat([T, 1, 1, 1]).permute((0, 1, 3, 2))  #（T, maxlen_sd, n_subdomains,1）
-            
+
+        if return_tree:
+            return input_u_sd_grid, input_xy_sd, input_u_sd_mask, input_u_sd, self.tree    
         return input_u_sd_grid, input_xy_sd, input_u_sd_mask, input_u_sd
 
 # 单例模式， 只生成一次KD_tree
