@@ -28,7 +28,7 @@ dataloader:
   pin_memory: False
 model:
   neighbors: 1
-  delta_t: 0.01
+  delta_t: 0.05
   hidden_features: 128
   hidden_layers: 6
   n_params: 4

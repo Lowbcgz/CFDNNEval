@@ -26,7 +26,7 @@ dataset:
 dataloader:
   batch_size: 16
   num_workers: 1
-  pin_memory: False
+  pin_memory: True
 model:
   trunk_size: 4 # space_dim+num_case_params
   branch_sizes: [5] # space_dim+input_size

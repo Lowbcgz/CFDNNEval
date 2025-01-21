@@ -24,8 +24,8 @@ dataset:
   multi_step_size: 3
 dataloader:
   batch_size: 8
-  num_workers: 0
-  pin_memory: False
+  num_workers: 1
+  pin_memory: True
 model:
   neighbors: 1
   delta_t: 0.05

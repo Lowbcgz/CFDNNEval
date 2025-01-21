@@ -25,7 +25,7 @@ dataset:
 dataloader:
   batch_size: 8
   num_workers: 1
-  pin_memory: False
+  pin_memory: True
 model:
   neighbors: 1
   delta_t: 0.1

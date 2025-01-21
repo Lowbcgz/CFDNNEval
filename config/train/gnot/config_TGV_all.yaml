@@ -13,7 +13,7 @@ training_type: "autoregressive" # "single_step"
 epochs: 50
 dataset:
   saved_folder: "/data1/FluidData/taylor_green_new"
-  case_name: "all"
+  case_name: "Re_ReD"
   reduced_resolution: 1
   reduced_batch: 1
   norm_props: True
@@ -23,7 +23,7 @@ dataset:
 dataloader:
   batch_size: 16
   num_workers: 1
-  pin_memory: False
+  pin_memory: True
 model:
   trunk_size: 5 # 2+num_case_params
   branch_sizes: [5] # space_dim+output_size
