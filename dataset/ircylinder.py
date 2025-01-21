@@ -337,7 +337,7 @@ class IRCylinderDataset_NUNO(Dataset):
 
 
                         from model.NUNO.nufno2d import data_preprocessing
-                        case_features, grid, mask, features_cloud = data_preprocessing(case_features, grid, n_subdomains = 8)
+                        case_features, grid, mask, features_cloud = data_preprocessing(case_features, grid, n_subdomains = 6)
 
 
                         self.grids.append(grid)

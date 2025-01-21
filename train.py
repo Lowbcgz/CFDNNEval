@@ -66,7 +66,7 @@ def train_loop(model, train_loader, optimizer, batch_scheduler, loss_fn, device,
                 preds=[]
                 total_loss = 0
                 for i in range(train_loader.dataset.multi_step_size):
-                    if args["model_name"] in ["NUFNO"]:  # have auxliary output as next input, since its input and output are incompatible.
+                    if args["model_name"] in ["NUFNO", "NUUNet"]:  # have auxliary output as next input, since its input and output are incompatible.
                         loss, pred , aux_out, info = model.one_forward_step(x, case_params, mask[:,i],  grid, y[:,i], loss_fn=loss_fn)
                         x = aux_out
                     else:
@@ -268,7 +268,7 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                         preds = []
                         gts = []
                     else:
-                        if args["model_name"] in ["NUFNO"]:
+                        if args["model_name"] in ["NUFNO", "NUUNet"]:
                             x = aux_out.detach()  # aux_out as next input, since the preds is incompatible with inputs 
                         else:
                             x = pred.detach() # x: input tensor (The previous time step prediction) [b, x1, ..., xd, v]
@@ -277,7 +277,7 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                     raise Exception(f"test_type {test_type} is not support for a single_step test_loader ")
 
 
-                if args["model_name"] in ["NUFNO"]:
+                if args["model_name"] in ["NUFNO", "NUUNet"]:
                     pred, aux_out = model(x, case_params, mask, grid)
                 else: 
                     pred = model(x, case_params, mask, grid)
@@ -308,7 +308,7 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
                 else:
                     preds=[]
                     for i in range(test_loader.dataset.multi_step_size):
-                        if args["model_name"] in ["NUFNO"]:
+                        if args["model_name"] in ["NUFNO", "NUUNet"]:
                             pred, aux_out = model(x, case_params, mask[:,i], grid)
                             x = aux_out
                         else:
