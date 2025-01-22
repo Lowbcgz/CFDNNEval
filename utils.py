@@ -779,6 +779,12 @@ def get_model(spatial_dim, n_case_params, args):
                 model_config['norm_eps'] = 1e-5
 
                 model = My_FourierTransformer3D(**model_config)
+            elif model_name == 'OFormer':
+                model = Oformer(input_ch=model_args['inputs_channel']+n_case_params,
+                                output_ch=model_args['outputs_channel'],
+                                n_tolx=args["model"]["num_points"],
+                                multi_step_size=args["dataset"]["multi_step_size"],
+                                dim=3)
 
     return model
 

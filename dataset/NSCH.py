@@ -11,6 +11,7 @@ class NSCHDataset(Dataset):
                  saved_folder='../data/',
                  case_name = 'ca_eps_ibc_mob_phi_re',
                  reduced_resolution = 1,
+                 reduced_resolution_t = 5,
                  reduced_batch = 1,
                  stable_state_diff = 0.001,
                  norm_props = True,
@@ -54,12 +55,13 @@ class NSCHDataset(Dataset):
                 if name in case_name.split('_'):
                     # print(f"{name} in {case_name}"  )
                     data_group = f[name]
-                    fuvp_list.append(np.array(data_group["fuvp"],dtype=np.float32))
-                    mobs_list.append(np.array(data_group["mobs"],dtype=np.float32))
-                    cas_list.append(np.array(data_group["CAs"],dtype=np.float32))
-                    res_list.append(np.array(data_group["Res"],dtype=np.float32))
-                    eps_list.append(np.array(data_group["eps"],dtype=np.float32))
+                    fuvp_list.append(data_group["fuvp"][...])
+                    mobs_list.append(data_group["mobs"][...])
+                    cas_list.append(data_group["CAs"][...])
+                    res_list.append(data_group["Res"][...])
+                    eps_list.append(data_group["eps"][...])
         # fuvp=np.concatenate(fuvp_list,axis=0)[::reduced_batch]
+        fuvp_list = [fuvp[::reduced_batch] for fuvp in fuvp_list]
         mobs=np.concatenate(mobs_list,axis=0)[::reduced_batch]
         cas=np.concatenate(cas_list,axis=0)[::reduced_batch]
         res=np.concatenate(res_list,axis=0)[::reduced_batch]
@@ -80,7 +82,7 @@ class NSCHDataset(Dataset):
             fuvp= fuvp.reshape(fuvp.shape[0],fuvp.shape[1],66,66,6)
             fuv = fuvp[:,:,:,:, :5] # (B, T, Nx, Ny, 5)
             
-            fuv = fuv[:,:, ::reduced_resolution, ::reduced_resolution] # (B, T, Nx, Ny, 5)
+            fuv = fuv[:,::reduced_resolution_t, ::reduced_resolution, ::reduced_resolution] # (B, T, Nx, Ny, 5)
             
             if self.grid is None:
                 #get grid
@@ -95,9 +97,8 @@ class NSCHDataset(Dataset):
                     if np.isnan(inputs[t]).any() or np.isnan(outputs[t]).any():
                         print(f"Invalid frame {t} in case {id_count}")
                         break
-                    inp_magn = np.sqrt(np.sum(inputs[t, :, :, 2:] ** 2, axis=-1))
-                    out_magn = np.sqrt(np.sum(outputs[t, :, :, 2:] ** 2, axis=-1))
-                    # out_magn = np.sqrt(outputs[t, :, :, 3] ** 2 + outputs[t, :, :, 4] ** 2)
+                    inp_magn = np.sqrt(np.sum(inputs[t, :, :, 2:3] ** 2, axis=-1))
+                    out_magn = np.sqrt(np.sum(outputs[t, :, :, 2:3] ** 2, axis=-1))
                     diff = np.abs(inp_magn - out_magn).mean()
                     if diff < stable_state_diff:
                         print(f"Converged at {t} in case {id_count}")

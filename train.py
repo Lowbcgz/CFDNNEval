@@ -279,6 +279,8 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
 
                 if args["model_name"] in ["NUFNO"]:
                     pred, aux_out = model(x, case_params, mask, grid)
+                elif args["model_name"] in ["OFormer"]:
+                    pred = model(x, case_params, mask, grid, test_loader.dataset.multi_step_size).reshape(y.shape)
                 else: 
                     pred = model(x, case_params, mask, grid)
 
@@ -304,7 +306,7 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
             else:
                 # autoregressive loop for multi_step
                 if args["model_name"] in ["OFormer"]:
-                    preds=model(x, case_params, mask, grid)
+                    preds = model(x, case_params, mask, grid).reshape(y.shape)
                 else:
                     preds=[]
                     for i in range(test_loader.dataset.multi_step_size):
