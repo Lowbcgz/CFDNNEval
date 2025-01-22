@@ -122,7 +122,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -133,7 +132,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -144,7 +142,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
@@ -155,7 +152,6 @@ def get_dataset(args):
                                     case_name=dataset_args['case_name'],
                                     reduced_resolution=dataset_args["reduced_resolution"],
                                     reduced_batch=dataset_args["reduced_batch"],
-                                    stable_state_diff = dataset_args['stable_state_diff'],
                                     norm_props = dataset_args['norm_props'],
                                     multi_step_size= dataset_args['multi_step_size'],
                                     reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -173,7 +169,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -184,7 +179,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -195,7 +189,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
@@ -206,7 +199,6 @@ def get_dataset(args):
                                     case_name=dataset_args['case_name'],
                                     reduced_resolution=dataset_args["reduced_resolution"],
                                     reduced_batch=dataset_args["reduced_batch"],
-                                    stable_state_diff = dataset_args['stable_state_diff'],
                                     norm_props = dataset_args['norm_props'],
                                     multi_step_size= dataset_args['multi_step_size'],
                                     reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -335,7 +327,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -346,7 +337,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -357,7 +347,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
@@ -368,7 +357,6 @@ def get_dataset(args):
                                     case_name=dataset_args['case_name'],
                                     reduced_resolution=dataset_args["reduced_resolution"],
                                     reduced_batch=dataset_args["reduced_batch"],
-                                    stable_state_diff = dataset_args['stable_state_diff'],
                                     norm_props = dataset_args['norm_props'],
                                     multi_step_size= dataset_args['multi_step_size'],
                                     reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -386,7 +374,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -397,7 +384,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 multi_step_size= dataset_args['multi_step_size'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -408,7 +394,6 @@ def get_dataset(args):
                                 case_name=dataset_args['case_name'],
                                 reduced_resolution=dataset_args["reduced_resolution"],
                                 reduced_batch=dataset_args["reduced_batch"],
-                                stable_state_diff = dataset_args['stable_state_diff'],
                                 norm_props = dataset_args['norm_props'],
                                 reshape_parameters=dataset_args.get('reshape_parameters', True)
                                 )
@@ -419,7 +404,6 @@ def get_dataset(args):
                                     case_name=dataset_args['case_name'],
                                     reduced_resolution=dataset_args["reduced_resolution"],
                                     reduced_batch=dataset_args["reduced_batch"],
-                                    stable_state_diff = dataset_args['stable_state_diff'],
                                     norm_props = dataset_args['norm_props'],
                                     multi_step_size= dataset_args['multi_step_size'],
                                     reshape_parameters=dataset_args.get('reshape_parameters', True)
@@ -790,35 +774,29 @@ default_minmax_channels = {
         "prop_geo": torch.tensor([[-0.00024760616361163557, -0.26001930236816406], [1.500606894493103, 0.260026216506958]]),
         "prop_bc_geo": torch.tensor([[-0.00024760616361163557, -0.26001930236816406],[1.500606894493103, 0.260026216506958]]),
     },
-    "Darcy":{
-        "darcy": torch.tensor([0.0,1.0]),
-        "PDEBench": torch.tensor([0.0,1.0])
-    },
-    "TGV":{
-        # "single": torch.tensor([0.0,1.0]),
-        "all": torch.tensor([0.0,1.0])
-    },
     "NSCH":{
-        "ca": torch.tensor([[-1.0031050443649292, -1.0, -0.006659443024545908],
-                             [1.0169320106506348, 1.0, 0.006659443024545908]]),
-        "phi": torch.tensor([[-1.1130390167236328, -1.1014549732208252, -0.04720066860318184],
-                             [1.0230979919433594, 1.101511001586914, 0.04855911061167717]]),
-        "eps": torch.tensor([[-1.0044399499893188, -1.0, -0.013375669717788696],
-                             [1.0347859859466553, 1.0, 0.013375669717788696]]),
-        "mob": torch.tensor([[-1.0075429677963257, -1.0, -0.03635774925351143],
-                             [1.0241769552230835, 1.0, 0.03635774925351143]]),
-        "re": torch.tensor([[-1.0031670331954956, -1.003255009651184, -0.05740956962108612],
-                            [1.0175230503082275, 1.003255009651184, 0.05740956962108612]]),
-        "ibc": torch.tensor([[-1.085737943649292, -9.99176025390625, -0.061475109308958054],
-                             [1.1198190450668335, 9.99176025390625, 0.061475109308958054]]),
-
-
+        "ca": torch.tensor([[-1.0013279914855957, -1.0, -0.01557231042534113],
+                             [1.0209170579910278, 1.0, 0.01557231042534113]]),
+        "phi": torch.tensor([[-1.1152399778366089, -1.0675870180130005, -0.07914472371339798],
+                             [1.0359419584274292, 1.0676339864730835, 0.07638972252607346]]),
+        "eps": torch.tensor([[-1.0, -1.0, -0.029226046055555344],
+                             [1.0413249731063843, 1.0, 0.029226046055555344]]),
+        "mob": torch.tensor([[-1.0272589921951294, -1.0059770345687866, -0.10580600053071976],
+                             [1.043949007987976, 1.0059770345687866, 0.10580600053071976]]),
+        "re": torch.tensor([[-1.0012580156326294, -1.0, -0.05708836019039154],
+                            [1.0202419757843018, 1.0, 0.05708836019039154]]),
+        "ibc": torch.tensor([[-1.083219051361084, -9.982743263244629, -0.06129448860883713],
+                             [1.119168996810913, 9.982743263244629, 0.06129448860883713]]),
     },
     "cylinder":{
+        "rBC": torch.tensor([[-41.48142623901367, -64.7027359008789, -5329.173828125],
+                             [110.315185546875, 63.08414077758789, 2628.212646484375]]),
         "rRE": torch.tensor([[-0.873637855052948, -1.2119133472442627, -8.137107849121094],
                              [2.213331460952759, 1.185351848602295, 2.3270020484924316]])
     },
     "ircylinder":{
+        "irBC": torch.tensor([[-42.211341857910156, -65.98857879638672, -5953.85888671875],
+                             [113.3804702758789, 64.10173797607422, 2933.802734375]]),
         "irRE": torch.tensor([[-0.9188112616539001, -1.2337069511413574, -8.151810646057129],
                               [2.2467875480651855, 1.2144097089767456, 2.6829822063446045]])
     },

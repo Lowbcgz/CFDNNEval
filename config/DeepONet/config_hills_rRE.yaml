@@ -19,7 +19,6 @@ dataset:
   reduced_batch: 1
   data_delta_time: 0.1
   delta_time: 0.1 
-  stable_state_diff: 0.001
   norm_props: True
   norm_bc: True  
   case_name: 'rRE'

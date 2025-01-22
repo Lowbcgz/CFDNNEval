@@ -361,7 +361,7 @@ def test_loop(test_loader, model, device, output_dir, args, metric_names=['MSE',
         res_dict["sw_res"][name] = sw_res
 
     metrics.print_res(res_dict)
-    denorm_str = '(denormed)' if args["if_denorm"] else ""
+    denorm_str = '(denormed)' if args["use_norm"] and args["if_denorm"] else ""
     metrics.write_res(res_dict, 
                       os.path.join(args["output_dir"],args["model_name"]+test_type + '_results.csv'),
                        args["flow_name"] + '_' + args['dataset']['case_name']+ denorm_str, 

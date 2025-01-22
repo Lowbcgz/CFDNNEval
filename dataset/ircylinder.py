@@ -14,7 +14,6 @@ class IRCylinderDataset(Dataset):
                  data_delta_time = 0.1,
                  delta_time: float = 0.1,   
                  num_samples_max = -1,
-                 stable_state_diff = 0.0001,
                  norm_props = True,
                  norm_bc = True,
                  reshape_parameters = True,
@@ -30,7 +29,6 @@ class IRCylinderDataset(Dataset):
             reduced_resolution(int): reduced spatial resolution, default:1
             reduced_batch(int): reduced batch, default:1 
             delta_time(float): Determine the spacing of each frame, default:0.1
-            stable_state_diff(float): If the interval between two frames is less than this value, the following data is not taken, default:0.001
             norm_props(bool): if True, normalize the viscosity and density, default:True
             norm_bc(bool): if True, normalize the parameter of bc, default:True
             reshape_parameters(bool): if True, reshape the parameters, (cases, p) -> (cases, x, y, p)

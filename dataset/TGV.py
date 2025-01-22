@@ -23,14 +23,11 @@ class TGVDataset(Dataset):
         self.physic_prop = []
         self.case_ids = []
         self.masks = []
-        # cnt = 0 # for reduced batch
 
         uvp_list=[]
         re_list=[]
-        V0_list=[]
         edge_list=[]
         nu_list=[]
-        rho_list=[]
         root_path = os.path.abspath(saved_folder + filename)
         with h5py.File(root_path, 'r') as f:
             # collect data
@@ -38,11 +35,11 @@ class TGVDataset(Dataset):
                 if name in case_name.split('_'):
                     # print(f"{name} in {case_name}"  )
                     data_group = f[name]
-                    uvp_list.append(np.array(data_group["uvp"],dtype=np.float32))
-                    re_list.append(np.array(data_group["Re"],dtype=np.float32))
+                    uvp_list.append(data_group["uvp"][...])
+                    re_list.append(data_group["Re"][...])
                     
-                    edge_list.append(np.array(data_group["edge"],dtype=np.float32))
-                    nu_list.append(np.array(data_group["nu"],dtype=np.float32))
+                    edge_list.append(data_group["edge"][...])
+                    nu_list.append(data_group["nu"][...])
                     
 
         uvp=np.concatenate(uvp_list,axis=0)[::reduced_batch]

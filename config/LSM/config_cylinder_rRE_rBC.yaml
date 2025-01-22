@@ -17,7 +17,6 @@ dataset:
   saved_folder: "/data1/FluidData/cylinder_reduced/"
   reduced_resolution: 1
   reduced_batch: 1
-  stable_state_diff: 0.0001
   norm_props: True
   case_name: 'rRE_rBC'
   multi_step_size: 3

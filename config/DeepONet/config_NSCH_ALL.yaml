@@ -14,12 +14,12 @@ epochs: 200
 # 数据集相关参数 
 dataset:
   single_file: True
-  saved_folder: "/data1/FluidData/two_phase_flow/"
+  saved_folder: "/data1/FluidData/two_phase_flow_new/"
   reduced_resolution: 1
   reduced_batch: 1
   stable_state_diff: 0.001
   norm_props: True
-  case_name: 'ibc_phi_ca_mob_re_eps'
+  case_name: 'ca_eps_ibc_mob_phi_re'
   multi_step_size: 3
   reshape_parameters: False
 # dataloader相关参数
@@ -44,7 +44,7 @@ model:
 optimizer:
   name: 'Adam'
   lr: 1.e-3
-  weight_decay: 1.e-4
+  weight_decay: 1.e-6
 # scheduler相关参数
 scheduler:
   name: "StepLR"
