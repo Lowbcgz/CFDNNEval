@@ -11,11 +11,11 @@ is_irregular: False
 # 训练相关参数
 seed: 0
 training_type: "autoregressive"
-epochs: 500
+epochs: 100
 # 数据集相关参数 
 dataset:
   single_file: True
-  saved_folder: "/home/data2/FluidData/taylor_green/"
+  saved_folder: "/data1/FluidData/taylor_green_new/"
   reduced_resolution: 1
   reduced_batch: 1
   data_delta_time: 0.1
@@ -23,7 +23,7 @@ dataset:
   stable_state_diff: 0.0001
   norm_props: True
   norm_bc: True  
-  case_name: 'Re_ReD'
+  case_name: 'all'
   multi_step_size: 3
 # dataloader相关参数
 dataloader:
@@ -35,8 +35,8 @@ dataloader:
 # 模型相关参数
 model:
   x_dim: 2
-  inputs_channel: 2
-  outputs_channel: 2
+  inputs_channel: 3
+  outputs_channel: 3
 # 优化器相关参数
 optimizer:
   name: 'AdamW'
@@ -46,7 +46,7 @@ optimizer:
 scheduler:
   name: "OneCycleLR"
   max_lr: 6.e-4
-  total_steps: 500
+  total_steps: 100
   div_factor: 1000
   pct_start: 0.3
   final_div_factor: 1000

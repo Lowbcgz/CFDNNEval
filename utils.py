@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import random
-from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, UNO3d, KNO2d, KNO3d, UNet2d, UNet3d, LSM_2d_ir, geoFNO2d, Oformer,  NUFNO2d, NUFNO3d, FourierTransformer2DLite, My_FourierTransformer2D, My_FourierTransformer3D, Darcy_FourierTransformer2D
+from model import FNO2d, FNO3d, LSM_2d, LSM_3d, AutoDeepONet, AutoDeepONet_3d, UNO2d, UNO3d, KNO2d, KNO3d, UNet2d, UNet3d, LSM_2d_ir, geoFNO2d, Oformer,  NUFNO2d, NUFNO3d, NUUNet2d, NUUNet3d, FourierTransformer2DLite, My_FourierTransformer2D, My_FourierTransformer3D, Darcy_FourierTransformer2D
 from dataset import *
 import os
 import shutil
@@ -159,7 +159,7 @@ def get_dataset(args):
         else:
             test_ms_data = None
     elif args["flow_name"] == "ircylinder":
-        if args["model_name"] == "NUFNO":
+        if args["model_name"] in  ["NUFNO", "NUUNet"]:
             _IRCylinderDataset = IRCylinderDataset_NUNO
         else:
             _IRCylinderDataset = IRCylinderDataset
@@ -364,7 +364,7 @@ def get_dataset(args):
         else:
             test_ms_data = None
     elif args["flow_name"] == "irhills":
-        if args["model_name"] == "NUFNO":
+        if args["model_name"] in ["NUFNO", "NUUNet"]:
             _IRHillsDataset = IRHillsDataset_NUNO
         else:
             _IRHillsDataset = IRHillsDataset
@@ -626,6 +626,12 @@ def get_model(spatial_dim, n_case_params, args):
                         out_channels=model_args['out_channels'],
                         init_features=model_args['init_features'],
                         n_case_params = n_case_params)
+            elif model_name == 'NUUNet':
+                model = NUUNet2d(in_channels=model_args['in_channels'],
+                        out_channels=model_args['out_channels'],
+                        init_features=model_args['init_features'],
+                        n_case_params = n_case_params,
+                        n_subdomains = model_args['n_subdomains'])
             elif model_name == 'OFormer':
                 model = Oformer(input_ch=model_args['inputs_channel']+n_case_params,
                                 output_ch=model_args['outputs_channel'],
@@ -743,6 +749,12 @@ def get_model(spatial_dim, n_case_params, args):
                         out_channels=model_args['out_channels'],
                         init_features=model_args['init_features'],
                         n_case_params = n_case_params)
+            elif model_name == 'NUUNet':
+                model = NUUNet3d(in_channels=model_args['in_channels'],
+                        out_channels=model_args['out_channels'],
+                        init_features=model_args['init_features'],
+                        n_case_params = n_case_params,
+                        n_subdomains = model_args['n_subdomains'])
             elif model_name == 'GFormer':
                 model_config = args["model"]
                 # 3D for hills
@@ -751,6 +763,12 @@ def get_model(spatial_dim, n_case_params, args):
                 model_config['norm_eps'] = 1e-5
 
                 model = My_FourierTransformer3D(**model_config)
+            elif model_name == 'OFormer':
+                model = Oformer(input_ch=model_args['inputs_channel']+n_case_params,
+                                output_ch=model_args['outputs_channel'],
+                                n_tolx=args["model"]["num_points"],
+                                multi_step_size=args["dataset"]["multi_step_size"],
+                                dim=3)
 
     return model
 
