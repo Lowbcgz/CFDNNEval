@@ -38,8 +38,8 @@ model:
 # 优化器相关参数
 optimizer:
   name: 'Adam'
-  lr: 1.e-3
-  weight_decay: 1.e-4
+  lr: 5.e-4
+  weight_decay: 1.e-5
 # scheduler相关参数
 scheduler:
   name: "StepLR"

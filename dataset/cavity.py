@@ -14,7 +14,7 @@ class CavityDataset(Dataset):
                  data_delta_time = 0.1,
                  delta_time: float = 0.1,   
                  num_samples_max = -1,
-                 stable_state_diff = 0.0001,
+                 stable_state_diff = 0.001,
                  norm_props = True,
                  norm_bc = True,
                  reshape_parameters = True,

@@ -14,7 +14,7 @@ epochs: 100
 # 数据集相关参数 
 dataset:
   single_file: True
-  saved_folder: "/data1/FluidData/taylor_green/"
+  saved_folder: "/data1/FluidData/taylor_green_new/"
   reduced_resolution: 1
   reduced_batch: 1
   norm_props: True
@@ -42,7 +42,7 @@ model:
 optimizer:
   name: 'Adam'
   lr: 1.e-3
-  weight_decay: 1.e-4
+  weight_decay: 1.e-6
 # scheduler相关参数
 scheduler:
   name: "StepLR"

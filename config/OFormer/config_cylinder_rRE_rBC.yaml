@@ -11,11 +11,11 @@ is_irregular: False
 # 训练相关参数
 seed: 0
 training_type: "autoregressive"
-epochs: 500
+epochs: 100
 # 数据集相关参数 
 dataset:
   single_file: True
-  saved_folder: "/home/data2/FluidData/cylinder_NEW/cylinder_reduced/"
+  saved_folder: "/data1/FluidData/cylinder_reduced/"
   reduced_resolution: 1
   reduced_batch: 1
   data_delta_time: 0.1
@@ -46,7 +46,7 @@ optimizer:
 scheduler:
   name: "OneCycleLR"
   max_lr: 6.e-4
-  total_steps: 500
+  total_steps: 100
   div_factor: 1000
   pct_start: 0.3
   final_div_factor: 1000

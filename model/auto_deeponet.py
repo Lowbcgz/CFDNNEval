@@ -39,7 +39,7 @@ class AutoDeepONet(nn.Module):
         act_norm: bool = False,
         act_on_output: bool = False,
         irregular_geometry: bool = False,
-        autoregressive_mode = True
+        autoregressive_mode:bool = True
     ):
         """
         Args:
@@ -117,11 +117,11 @@ class AutoDeepONet(nn.Module):
 
         # Simple prepend physical properties to the input field.
         flat_inputs = torch.cat([flat_inputs, case_params], dim=1)
-        x_branch = self.branch_net(flat_inputs)
-
         n_query = query_point.shape[0]
+        
+        x_branch = self.branch_net(flat_inputs) # (b, c*p)
         # Input to the trunk net
-        x_trunk = self.trunk_net(query_point)  # (k, p)
+        x_trunk = self.trunk_net(query_point)  # (k, c*p)
         x_branch=x_branch.reshape([batch_size,1,self.out_channel,-1]) #(b, 1 ,c, p)
         x_trunk=x_trunk.reshape([1,n_query,self.out_channel,-1]) # (1, k, c, p)
         residuals = torch.sum(x_branch * x_trunk, dim=-1) + self.bias  # (b, k, c)
@@ -177,7 +177,7 @@ class AutoDeepONet_3d(nn.Module):
         act_norm: bool = False,
         act_on_output: bool = False,
         irregular_geometry: bool = False,
-        autoregressive_mode = True
+        autoregressive_mode: bool = True
     ):
         """
         Args:
@@ -220,19 +220,20 @@ class AutoDeepONet_3d(nn.Module):
         ### Args
         - inputs: (b, h, w, c) for grid or (b, nx, c) for points cloud 
         - case_params: (b, p)
-        - query_point: (k, 2), k is the number of query points, each is
-            an (x, y) coordinate.
-        - mask: (b, h, w, 1) for grid or (b, nx, 1) for points cloud 
+        - query_point: (k, 3), k is the number of query points, each is
+            an (x, y, z) coordinate.
+        - mask: (b, h, w, d, 1) for grid or (b, nx, 1) for points cloud 
 
         ### Returns
             Output: Tensor, if query_points is not None, the shape is (b, k).
-                Else, the shape is (b, h, w, c).
+                Else, the shape is (b, h, w, d, c).
 
         Notations:
         - b: batch size
         - c: number of channels
         - h: height
         - w: width
+        - d: depth
         - p: number of case parameters
         - k: number of query points
         """
@@ -251,17 +252,19 @@ class AutoDeepONet_3d(nn.Module):
         
         inputs = inputs * mask
         # Flatten
-        flat_inputs = inputs.view(batch_size, -1)  # (b, h * w * c)
+        flat_inputs = inputs.view(batch_size, -1)  # (b, h * w * d * c)
 
         # Simple prepend physical properties to the input field.
         flat_inputs = torch.cat([flat_inputs, case_params], dim=1)
-        x_branch = self.branch_net(flat_inputs)
-
         n_query = query_point.shape[0]
+        
+        x_branch = self.branch_net(flat_inputs) # (b, c*p)
         # Input to the trunk net
-        x_trunk = self.trunk_net(query_point)  # (k, p)
+        x_trunk = self.trunk_net(query_point)  # (k, c*p)
+
         x_branch=x_branch.reshape([batch_size,1,self.out_channel,-1]) #(b, 1 ,c, p)
         x_trunk=x_trunk.reshape([1,n_query,self.out_channel,-1]) # (1, k, c, p)
+
         residuals = torch.sum(x_branch * x_trunk, dim=-1) + self.bias  # (b, k, c)
         if self.autoregressive_mode:
             preds = inputs.view(batch_size, -1,self.out_channel) # (b, k, c)

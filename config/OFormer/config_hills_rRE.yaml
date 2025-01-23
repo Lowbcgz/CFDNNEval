@@ -1,4 +1,4 @@
-flow_name: 'ircylinder'
+flow_name: 'hills'
 model_name: "OFormer"
 if_training: True
 continue_training: False
@@ -7,36 +7,36 @@ saved_dir: "./checkpoint/"
 output_dir: "./output/"
 save_period: 10
 plot_interval: 1
-is_irregular: True
+is_irregular: False
 # 训练相关参数
 seed: 0
 training_type: "autoregressive"
-epochs: 100
+epochs: 50
 # 数据集相关参数 
 dataset:
   single_file: True
-  saved_folder: "/data1/FluidData/cylinder_reduced/"
-  reduced_resolution: 1
+  saved_folder: "/data1/FluidData/periodic_hills/"
+  reduced_resolution: 2
   reduced_batch: 1
   data_delta_time: 0.1
   delta_time: 0.1 
   stable_state_diff: 0.001
   norm_props: True
   norm_bc: True  
-  case_name: 'irRE_irBC'
+  case_name: 'rRE'
   multi_step_size: 3
 # dataloader相关参数
 dataloader:
-  train_batch_size: 32
-  val_batch_size: 32
+  train_batch_size: 4
+  val_batch_size: 4
   test_batch_size: 1
   num_workers: 1
   pin_memory: False
 # 模型相关参数
 model:
-  x_dim: 2
-  inputs_channel: 3
-  outputs_channel: 3
+  x_dim: 3
+  inputs_channel: 4
+  outputs_channel: 4
 # 优化器相关参数
 optimizer:
   name: 'AdamW'
@@ -46,7 +46,7 @@ optimizer:
 scheduler:
   name: "OneCycleLR"
   max_lr: 6.e-4
-  total_steps: 100
+  total_steps: 50
   div_factor: 1000
   pct_start: 0.3
   final_div_factor: 1000
