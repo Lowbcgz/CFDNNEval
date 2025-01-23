@@ -35,7 +35,7 @@ from collections.abc import Mapping
 ```
 
 ## Training models
-1. Download [PDEBench datasets](https://darus.uni-stuttgart.de/dataset.xhtml?persistentId=doi:10.18419/darus-2986) to `./datasets`
+1. Download [CFDNNEval Datasets](https://drive.google.com/drive/folders/1Ao9vfWjy1VTwTa-9N1axZlXlz1s6CjPW?usp=sharing) to `./datasets`
 2. Generate the PDE metadata by 
 ```
 generate_metadata_data.ipynb
